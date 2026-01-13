@@ -1,73 +1,65 @@
-# React + TypeScript + Vite
+# 🌟 SkillSwap
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**SkillSwap** is a peer-to-peer campus skill-sharing marketplace built for the GDG TechSprint Hackathon. It connects students who want to learn new skills with those who can teach them, powered by Google Gemini AI for smart matching.
 
-Currently, two official plugins are available:
+## ✨ Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Google Sign-In**: Secure campus-only authentication restricted to `@muj.manipal.edu` domains.
+- **Skill Marketplace**: Post "Offers" for skills you can teach and "Requests" for skills you want to learn.
+- **AI Smart Matching**: Powered by **Google Gemini**, providing personalized explanations of why two students are a perfect match.
+- **Real-time Chat**: Connect instantly with your matches to discuss details.
+- **Session Booking**: Structured scheduling system to finalize when and where to meet.
+- **Responsive UI**: A modern, snappy interface built with React and Tailwind v4.
 
-## React Compiler
+## 🛠️ Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend**: React (Vite) + TypeScript
+- **Styling**: TailwindCSS v4 + Lucide Icons
+- **Backend**: Firebase (Authentication, Firestore, Hosting)
+- **AI**: Google Gemini API
+- **State Management**: Zustand
 
-## Expanding the ESLint configuration
+## 🚀 Quick Start
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 1. Prerequisites
+- Node.js (v18+)
+- Firebase Account
+- Google AI Studio API Key
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2. Installation
+```bash
+git clone https://github.com/AnkitBangadkar/SkillSwap.git
+cd SkillSwap
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 3. Configuration
+Rename `.env.example` to `.env` and add your credentials:
+```env
+VITE_FIREBASE_API_KEY=your_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_id
+VITE_FIREBASE_APP_ID=your_app_id
+VITE_GEMINI_API_KEY=your_gemini_key
 ```
+
+### 4. Development
+```bash
+npm run dev
+```
+
+## 🔐 Firebase Setup
+1. Enable **Google Auth** in Firebase Console.
+2. Create a **Firestore** database.
+3. Deploy security rules:
+   ```bash
+   npx firebase deploy --only firestore:rules
+   ```
+
+## 📄 Documentation
+For a detailed handoff and success guide, check out [HANDOFF.md](./handoff.md).
+
+---
+Built with ❤️ for GDG TechSprint.
