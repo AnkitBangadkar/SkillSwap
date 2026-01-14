@@ -36,3 +36,7 @@ ui-debug.log
 # OS Files
 Thumbs.db
 desktop.ini
+
+# Temporary files
+temp/
+opencode.json

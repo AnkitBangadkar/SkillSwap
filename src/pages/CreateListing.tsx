@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
 import {
   Card,
@@ -15,15 +15,17 @@ import { ROUTES, MODE_OPTIONS, AVAILABILITY_OPTIONS, APP_CONFIG } from '../lib/c
 import type { CreateListingData, ListingMode } from '../types';
 import { useUIStore } from '../stores/uiStore';
 import { useAuthStore } from '../stores/authStore';
-import { createListing } from '../services/listings';
+import { createListing, getListing, updateListing } from '../services/listings';
 import { generateTagSuggestions } from '../services/gemini';
 
 export default function CreateListing() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const { showToast } = useUIStore();
   const { user } = useAuthStore();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
   const [isGettingSuggestions, setIsGettingSuggestions] = useState(false);
   const [formData, setFormData] = useState<CreateListingData>({
     title: '',
@@ -34,6 +36,44 @@ export default function CreateListing() {
     mode: 'both',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    async function fetchListing() {
+      if (!id || !user) return;
+      
+      setIsFetching(true);
+      try {
+        const listing = await getListing(id);
+        if (!listing) {
+          showToast({ type: 'error', message: 'Listing not found' });
+          navigate(ROUTES.dashboard);
+          return;
+        }
+        
+        if (listing.userId !== user.id) {
+          showToast({ type: 'error', message: 'You can only edit your own listings' });
+          navigate(ROUTES.dashboard);
+          return;
+        }
+
+        setFormData({
+          title: listing.title,
+          description: listing.description,
+          type: listing.type,
+          tags: listing.tags,
+          availability: listing.availability,
+          mode: listing.mode,
+        });
+      } catch (error) {
+        console.error('Failed to fetch listing:', error);
+        showToast({ type: 'error', message: 'Failed to load listing' });
+      } finally {
+        setIsFetching(false);
+      }
+    }
+
+    fetchListing();
+  }, [id, user, navigate, showToast]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -81,24 +121,32 @@ export default function CreateListing() {
     setIsSubmitting(true);
 
     try {
-      // Create listing in Firestore
-      await createListing(
-        user.id,
-        user.name,
-        user.photoURL,
-        formData
-      );
-
-      showToast({
-        type: 'success',
-        message: 'Listing created successfully!',
-      });
+      if (id) {
+        // Update existing listing
+        await updateListing(id, formData);
+        showToast({
+          type: 'success',
+          message: 'Listing updated successfully!',
+        });
+      } else {
+        // Create listing in Firestore
+        await createListing(
+          user.id,
+          user.name,
+          user.photoURL,
+          formData
+        );
+        showToast({
+          type: 'success',
+          message: 'Listing created successfully!',
+        });
+      }
 
       navigate(ROUTES.dashboard);
     } catch {
       showToast({
         type: 'error',
-        message: 'Failed to create listing. Please try again.',
+        message: `Failed to ${id ? 'update' : 'create'} listing. Please try again.`,
       });
     } finally {
       setIsSubmitting(false);
@@ -152,23 +200,30 @@ export default function CreateListing() {
       <div className="mb-6">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+          className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
           Back
         </button>
-        <h1 className="text-2xl font-bold text-gray-900">Create Listing</h1>
-        <p className="text-gray-600 mt-1">
-          Share a skill you can teach or request help with something you want to learn
+        <h1 className="text-2xl font-display font-bold text-[var(--text-primary)]">
+          {id ? 'Edit Listing' : 'Create Listing'}
+        </h1>
+        <p className="text-[var(--text-secondary)] mt-1">
+          {id ? 'Update your listing details' : 'Share a skill you can teach or request help with something you want to learn'}
         </p>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <Card padding="lg">
+      {isFetching ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <Card padding="lg">
           <CardContent className="space-y-6">
             {/* Type Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-3">
                 What would you like to do?
               </label>
               <div className="grid grid-cols-2 gap-4">
@@ -176,12 +231,12 @@ export default function CreateListing() {
                   type="button"
                   onClick={() => setFormData({ ...formData, type: 'offer' })}
                   className={`p-4 rounded-xl border-2 text-left transition-all ${formData.type === 'offer'
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20 dark:border-green-600'
+                    : 'border-[var(--border-default)] hover:border-[var(--border-highlight)] bg-[var(--bg-surface-highlight)]'
                     }`}
                 >
-                  <p className="font-semibold text-gray-900">Offer a Skill</p>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="font-semibold text-[var(--text-primary)]">Offer a Skill</p>
+                  <p className="text-sm text-[var(--text-secondary)] mt-1">
                     Share something you're good at
                   </p>
                 </button>
@@ -189,12 +244,12 @@ export default function CreateListing() {
                   type="button"
                   onClick={() => setFormData({ ...formData, type: 'request' })}
                   className={`p-4 rounded-xl border-2 text-left transition-all ${formData.type === 'request'
-                    ? 'border-indigo-500 bg-indigo-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-600'
+                    : 'border-[var(--border-default)] hover:border-[var(--border-highlight)] bg-[var(--bg-surface-highlight)]'
                     }`}
                 >
-                  <p className="font-semibold text-gray-900">Request Help</p>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="font-semibold text-[var(--text-primary)]">Request Help</p>
+                  <p className="text-sm text-[var(--text-secondary)] mt-1">
                     Learn something new from peers
                   </p>
                 </button>
@@ -233,7 +288,7 @@ export default function CreateListing() {
             {/* Tags with AI Suggestion */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-[var(--text-secondary)]">
                   Skills / Topics
                 </label>
                 <Button
@@ -272,7 +327,7 @@ export default function CreateListing() {
 
             {/* Mode */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-3">
                 Preferred Mode
               </label>
               <div className="flex gap-3">
@@ -282,8 +337,8 @@ export default function CreateListing() {
                     type="button"
                     onClick={() => setFormData({ ...formData, mode: mode.value as ListingMode })}
                     className={`flex-1 py-2 px-4 rounded-lg border-2 text-sm font-medium transition-all ${formData.mode === mode.value
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:border-indigo-600 dark:text-indigo-300'
+                      : 'border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--border-highlight)] bg-[var(--bg-surface-highlight)]'
                       }`}
                   >
                     {mode.label}
@@ -312,12 +367,13 @@ export default function CreateListing() {
                 isLoading={isSubmitting}
                 className="flex-1"
               >
-                Create Listing
+                {id ? 'Update Listing' : 'Create Listing'}
               </Button>
             </div>
           </CardContent>
         </Card>
       </form>
+      )}
     </div>
   );
 }

@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { Card, Button, EmptyState } from '../components/ui';
 import { ROUTES } from '../lib/constants';
 
 export default function Matches() {
+  const navigate = useNavigate();
   // For now, show empty state encouraging users to explore and create listings
   // Real matching would require AI analysis of listings to find compatible users
 
@@ -46,7 +47,7 @@ export default function Matches() {
         description="Create more listings and explore others' posts to get AI-powered match suggestions"
         action={{
           label: 'Create a Listing',
-          href: ROUTES.createListing,
+          onClick: () => navigate(ROUTES.createListing),
         }}
       />
     </div>

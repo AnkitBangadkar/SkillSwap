@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Camera, Mail, Calendar, Edit2, Save, X, Loader2, GraduationCap } from 'lucide-react';
 import { Card, Button, Input, Avatar, Badge, EmptyState } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import { formatDate } from '../lib/utils';
 import { getUserListings } from '../services/listings';
+import { updateUserProfile } from '../services/auth';
+import { ROUTES } from '../lib/constants';
 import type { Listing } from '../types';
 
 export default function Profile() {
-  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const { user, refreshUser } = useAuthStore();
   const { showToast } = useUIStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(user?.name || '');
@@ -35,11 +39,24 @@ export default function Profile() {
   }, [user]);
 
   const handleSave = async () => {
-    showToast({
-      type: 'info',
-      message: 'Profile name is synced from your Google account',
-    });
-    setIsEditing(false);
+    if (!user || !editedName.trim()) return;
+
+    try {
+      await updateUserProfile(user.id, { name: editedName });
+      await refreshUser();
+      
+      showToast({
+        type: 'success',
+        message: 'Profile updated successfully',
+      });
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to update profile',
+      });
+    }
   };
 
   const handleCancel = () => {
@@ -178,7 +195,11 @@ export default function Profile() {
                       ))}
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate(ROUTES.editListing(listing.id))}
+                  >
                     Edit
                   </Button>
                 </div>

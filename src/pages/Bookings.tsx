@@ -127,10 +127,10 @@ export default function Bookings() {
 
   const getStatusBadge = (status: BookingStatus) => {
     const config = BOOKING_STATUS_LABELS[status];
-    const variantMap: Record<string, 'success' | 'warning' | 'error' | 'primary' | 'outline'> = {
+    const variantMap: Record<string, 'success' | 'warning' | 'danger' | 'primary' | 'outline'> = {
       green: 'success',
       yellow: 'warning',
-      red: 'error',
+      red: 'danger',
       blue: 'primary',
       gray: 'outline',
     };
@@ -147,26 +147,28 @@ export default function Bookings() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Sessions</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-display font-bold text-[var(--text-primary)]">Sessions</h1>
+        <p className="text-[var(--text-secondary)] mt-1">
           Manage your scheduled skill exchange sessions
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200 pb-2">
+      <div className="flex gap-2 border-b border-[var(--border-default)] pb-2">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === tab.key
-                ? 'bg-indigo-100 text-indigo-700'
-                : 'text-gray-600 hover:bg-gray-100'
+              ? 'bg-[var(--color-primary-100)] text-[var(--color-primary-700)] dark:bg-[var(--color-primary-900)] dark:text-[var(--color-primary-100)]'
+              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-surface-highlight)] hover:text-[var(--text-primary)]'
               }`}
           >
             {tab.label}
             {tab.count > 0 && (
-              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${activeTab === tab.key ? 'bg-indigo-200' : 'bg-gray-200'
+              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${activeTab === tab.key 
+                ? 'bg-[var(--color-primary-200)] text-[var(--color-primary-800)] dark:bg-[var(--color-primary-800)] dark:text-[var(--color-primary-200)]' 
+                : 'bg-[var(--bg-surface-highlight)] text-[var(--text-tertiary)]'
                 }`}>
                 {tab.count}
               </span>
@@ -192,10 +194,10 @@ export default function Bookings() {
                 {/* Header */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate">
+                    <h3 className="font-semibold text-[var(--text-primary)] truncate">
                       {booking.listingTitle}
                     </h3>
-                    <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                    <div className="flex items-center gap-2 mt-1 text-sm text-[var(--text-secondary)]">
                       <User className="h-4 w-4" />
                       <span>with {otherName}</span>
                       {isProvider && (
@@ -207,22 +209,22 @@ export default function Bookings() {
                 </div>
 
                 {/* Details */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-gray-400" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-[var(--bg-surface-highlight)] rounded-xl">
+                  <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                    <Calendar className="h-4 w-4 text-[var(--text-tertiary)]" />
                     <span>{formatDate(booking.proposedDate)}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-gray-400" />
+                  <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                    <Clock className="h-4 w-4 text-[var(--text-tertiary)]" />
                     <span>{formatTime(booking.proposedTime)}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-gray-400" />
+                  <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                    <Clock className="h-4 w-4 text-[var(--text-tertiary)]" />
                     <span>{getDurationLabel(booking.duration)}</span>
                   </div>
                   {booking.location && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-gray-400" />
+                    <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                      <MapPin className="h-4 w-4 text-[var(--text-tertiary)]" />
                       <span className="truncate">{booking.location}</span>
                     </div>
                   )}
@@ -230,7 +232,7 @@ export default function Bookings() {
 
                 {/* Notes */}
                 {booking.notes && (
-                  <p className="text-sm text-gray-600 italic">"{booking.notes}"</p>
+                  <p className="text-sm text-[var(--text-secondary)] italic">"{booking.notes}"</p>
                 )}
 
                 {/* Actions */}

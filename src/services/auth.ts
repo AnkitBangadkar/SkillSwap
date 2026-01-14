@@ -97,6 +97,15 @@ async function createOrUpdateUser(firebaseUser: FirebaseUser): Promise<User> {
 }
 
 // ============================================
+// Update User Profile
+// ============================================
+
+export async function updateUserProfile(userId: string, data: Partial<User>): Promise<void> {
+  const userRef = doc(db, 'users', userId);
+  await setDoc(userRef, data, { merge: true });
+}
+
+// ============================================
 // Sign Out
 // ============================================
 

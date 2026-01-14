@@ -1,13 +1,15 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
+import { motion, type HTMLMotionProps } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { Loader2 } from 'lucide-react';
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -26,19 +28,19 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles = 
-      'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
+      'inline-flex items-center justify-center font-medium rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary-500)] disabled:opacity-50 disabled:pointer-events-none';
 
     const variants = {
       primary:
-        'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500',
+        'btn-primary shadow-sm hover:shadow-md',
       secondary:
-        'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500',
+        'bg-[var(--bg-surface-highlight)] text-[var(--text-primary)] hover:bg-[var(--border-default)]',
       outline:
-        'border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-50 focus:ring-indigo-500',
+        'btn-outline',
       ghost:
-        'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
+        'bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-surface-highlight)] hover:text-[var(--text-primary)]',
       danger:
-        'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
+        'bg-[var(--color-error)] text-white hover:opacity-90',
     };
 
     const sizes = {
@@ -48,8 +50,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     return (
-      <button
+      <motion.button
         ref={ref}
+        whileTap={{ scale: 0.97 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 17 }}
         className={cn(baseStyles, variants[variant], sizes[size], className)}
         disabled={disabled || isLoading}
         {...props}
@@ -61,7 +65,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {children}
         {!isLoading && rightIcon}
-      </button>
+      </motion.button>
     );
   }
 );

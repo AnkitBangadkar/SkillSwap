@@ -52,8 +52,8 @@ export default function Chats() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-display font-bold text-[var(--text-primary)]">Messages</h1>
+        <p className="text-[var(--text-secondary)] mt-1">
           Chat with peers about skill exchanges
         </p>
       </div>
@@ -111,17 +111,17 @@ export default function Chats() {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-semibold text-gray-900 truncate">
+                      <h3 className="font-semibold text-[var(--text-primary)] truncate">
                         {other?.name || 'Unknown User'}
                       </h3>
-                      <span className="text-xs text-gray-500 flex-shrink-0">
+                      <span className="text-xs text-[var(--text-tertiary)] flex-shrink-0">
                         {formatTime(chat.lastMessageAt)}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-500 truncate">
+                    <p className="text-sm text-[var(--text-secondary)] truncate">
                       {chat.listingTitle}
                     </p>
-                    <p className={`text-sm truncate ${unread > 0 ? 'font-medium text-gray-900' : 'text-gray-600'}`}>
+                    <p className={`text-sm truncate ${unread > 0 ? 'font-medium text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'}`}>
                       {chat.lastMessage || 'No messages yet'}
                     </p>
                   </div>

@@ -10,9 +10,9 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', padding = 'md', hover = false, ...props }, ref) => {
     const variants = {
-      default: 'bg-white border border-gray-200',
-      bordered: 'bg-white border-2 border-gray-200',
-      elevated: 'bg-white shadow-lg',
+      default: 'card-base',
+      bordered: 'card-base border-2',
+      elevated: 'card-base shadow-lg dark:shadow-black/50',
     };
 
     const paddings = {
@@ -26,10 +26,10 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          'rounded-xl',
+          'rounded-2xl',
           variants[variant],
           paddings[padding],
-          hover && 'transition-shadow hover:shadow-md cursor-pointer',
+          hover && 'card-hover cursor-pointer',
           className
         )}
         {...props}
@@ -58,7 +58,7 @@ const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingEleme
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}
-      className={cn('text-lg font-semibold text-gray-900', className)}
+      className={cn('text-lg font-semibold text-[var(--text-primary)] font-display', className)}
       {...props}
     />
   )
@@ -71,7 +71,7 @@ const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLPara
   ({ className, ...props }, ref) => (
     <p
       ref={ref}
-      className={cn('text-sm text-gray-500', className)}
+      className={cn('text-sm text-[var(--text-secondary)]', className)}
       {...props}
     />
   )

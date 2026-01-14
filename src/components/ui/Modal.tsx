@@ -44,20 +44,20 @@ export function Modal({
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
           className={cn(
-            'bg-white rounded-xl shadow-xl w-full animate-in zoom-in-95 duration-200',
+            'bg-[var(--bg-surface)] rounded-2xl shadow-2xl w-full animate-in zoom-in-95 duration-200 border border-[var(--border-default)]',
             sizes[size]
           )}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           {(title || showClose) && (
-            <div className="flex items-start justify-between p-4 border-b border-gray-200">
+            <div className="flex items-start justify-between p-5 border-b border-[var(--border-default)]">
               <div>
                 {title && (
-                  <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+                  <h2 className="text-xl font-display font-semibold text-[var(--text-primary)]">{title}</h2>
                 )}
                 {description && (
-                  <p className="mt-1 text-sm text-gray-500">{description}</p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">{description}</p>
                 )}
               </div>
               {showClose && (
@@ -85,7 +85,7 @@ export function Modal({
 // Convenience components for modal actions
 export function ModalFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('flex items-center justify-end gap-3 pt-4 border-t border-gray-200 -mx-4 px-4 -mb-4 pb-4 mt-4', className)}>
+    <div className={cn('flex items-center justify-end gap-3 pt-5 border-t border-[var(--border-default)] -mx-5 px-5 -mb-5 pb-5 mt-5', className)}>
       {children}
     </div>
   );

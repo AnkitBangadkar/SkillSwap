@@ -29,7 +29,7 @@ export function Select({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5 ml-1">
           {label}
         </label>
       )}
@@ -38,10 +38,10 @@ export function Select({
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         className={cn(
-          'block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900',
-          'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
-          'disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed',
-          error && 'border-red-500 focus:ring-red-500',
+          'input-base block w-full rounded-xl px-4 py-2.5 transition-all duration-200 appearance-none',
+          'focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)] focus:border-transparent',
+          'disabled:bg-[var(--bg-surface-highlight)] disabled:opacity-50 disabled:cursor-not-allowed',
+          error && 'border-[var(--color-error)] focus:ring-[var(--color-error)]',
           className
         )}
       >
@@ -54,7 +54,7 @@ export function Select({
           </option>
         ))}
       </select>
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-1.5 text-sm text-[var(--color-error)] ml-1">{error}</p>}
     </div>
   );
 }

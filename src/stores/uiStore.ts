@@ -2,6 +2,11 @@ import { create } from 'zustand';
 import type { Notification } from '../types';
 
 interface UIState {
+  // Theme
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
+  setTheme: (theme: 'light' | 'dark') => void;
+
   // Sidebar
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
@@ -29,6 +34,31 @@ interface Toast {
 }
 
 export const useUIStore = create<UIState>((set, get) => ({
+  // Theme
+  theme: (localStorage.getItem('theme') as 'light' | 'dark') || 
+         (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+  toggleTheme: () => {
+    set((state) => {
+      const newTheme = state.theme === 'light' ? 'dark' : 'light';
+      localStorage.setItem('theme', newTheme);
+      if (newTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      return { theme: newTheme };
+    });
+  },
+  setTheme: (theme) => {
+    localStorage.setItem('theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    set({ theme });
+  },
+
   // Sidebar
   sidebarOpen: false,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),

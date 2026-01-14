@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Filter, X, Loader2, MessageCircle, Clock, MapPin } from 'lucide-react';
 import { Input, Button, Badge, Card, Avatar, EmptyState, Select, Modal } from '../components/ui';
+import { StaggerContainer, StaggerItem, FadeIn } from '../components/ui/Motion';
 import { SKILL_CATEGORIES, MODE_OPTIONS, ROUTES } from '../lib/constants';
 import { getListings } from '../services/listings';
+import { createChat } from '../services/chat';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import type { Listing } from '../types';
 
 export default function Explore() {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { showToast } = useUIStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,12 +71,35 @@ export default function Explore() {
     setSelectedTags([]);
   };
 
-  const handleConnect = (listing: Listing) => {
-    showToast({
-      type: 'success',
-      message: `Connection request sent to ${listing.userName}!`,
-    });
-    setSelectedListing(null);
+  const handleConnect = async (listing: Listing) => {
+    if (!user) return;
+
+    try {
+      const chatId = await createChat(
+        listing.id,
+        listing.title,
+        user.id,
+        user.name,
+        user.photoURL,
+        listing.userId,
+        listing.userName,
+        listing.userPhoto
+      );
+
+      showToast({
+        type: 'success',
+        message: `Connected with ${listing.userName}!`,
+      });
+      
+      setSelectedListing(null);
+      navigate(ROUTES.chatRoom(chatId));
+    } catch (error) {
+      console.error('Failed to connect:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to start conversation. Please try again.',
+      });
+    }
   };
 
   const hasActiveFilters = searchQuery || typeFilter || modeFilter || selectedTags.length > 0;
@@ -80,15 +107,15 @@ export default function Explore() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Explore Skills</h1>
-        <p className="text-gray-600 mt-1">
+      <FadeIn>
+        <h1 className="text-2xl font-display font-bold text-[var(--text-primary)]">Explore Skills</h1>
+        <p className="text-[var(--text-secondary)] mt-1">
           Discover skills offered and requested by your peers
         </p>
-      </div>
+      </FadeIn>
 
       {/* Search & Filters */}
-      <div className="space-y-4">
+      <FadeIn delay={0.1} className="space-y-4">
         <div className="flex gap-3">
           <div className="flex-1">
             <Input
@@ -105,7 +132,7 @@ export default function Explore() {
           >
             Filters
             {hasActiveFilters && (
-              <span className="ml-1 h-5 w-5 rounded-full bg-indigo-200 text-indigo-700 text-xs flex items-center justify-center">
+              <span className="ml-1 h-5 w-5 rounded-full bg-[var(--color-primary-100)] text-[var(--color-primary-700)] text-xs flex items-center justify-center">
                 !
               </span>
             )}
@@ -135,7 +162,7 @@ export default function Explore() {
             </div>
 
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Quick Filters</p>
+              <p className="text-sm font-medium text-[var(--text-primary)] mb-2">Quick Filters</p>
               <div className="flex flex-wrap gap-2">
                 {SKILL_CATEGORIES.slice(0, 4).map((cat) => (
                   <Badge
@@ -166,63 +193,67 @@ export default function Explore() {
             )}
           </Card>
         )}
-      </div>
+      </FadeIn>
 
       {/* Results Count */}
-      <p className="text-sm text-gray-500">
-        Showing {filteredListings.length} of {listings.length} listings
-      </p>
+      <FadeIn delay={0.2}>
+        <p className="text-sm text-[var(--text-tertiary)]">
+          Showing {filteredListings.length} of {listings.length} listings
+        </p>
+      </FadeIn>
 
       {/* Loading State */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary-600)]" />
         </div>
       ) : filteredListings.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" delay={0.2}>
           {filteredListings.map((listing) => (
-            <Card key={listing.id} hover padding="md" className="flex flex-col">
-              {/* User Info */}
-              <div className="flex items-center gap-3 mb-3">
-                <Avatar name={listing.userName} src={listing.userPhoto} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">{listing.userName}</p>
-                  <p className="text-xs text-gray-500">{listing.availability}</p>
-                </div>
-                <Badge
-                  variant={listing.type === 'offer' ? 'success' : 'primary'}
-                  size="sm"
-                >
-                  {listing.type === 'offer' ? 'Offers' : 'Needs'}
-                </Badge>
-              </div>
-
-              {/* Listing Content */}
-              <h3 className="font-semibold text-gray-900 mb-2">{listing.title}</h3>
-              <p className="text-sm text-gray-600 line-clamp-2 mb-3 flex-1">
-                {listing.description}
-              </p>
-
-              {/* Tags */}
-              <div className="flex flex-wrap gap-1 mb-4">
-                {listing.tags.map((tag) => (
-                  <Badge key={tag} variant="outline" size="sm">
-                    {tag}
+            <StaggerItem key={listing.id}>
+              <Card hover padding="md" className="flex flex-col h-full">
+                {/* User Info */}
+                <div className="flex items-center gap-3 mb-3">
+                  <Avatar name={listing.userName} src={listing.userPhoto} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-[var(--text-primary)] truncate">{listing.userName}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">{listing.availability}</p>
+                  </div>
+                  <Badge
+                    variant={listing.type === 'offer' ? 'success' : 'primary'}
+                    size="sm"
+                  >
+                    {listing.type === 'offer' ? 'Offers' : 'Needs'}
                   </Badge>
-                ))}
-              </div>
+                </div>
 
-              {/* Action */}
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setSelectedListing(listing)}
-              >
-                View Details
-              </Button>
-            </Card>
+                {/* Listing Content */}
+                <h3 className="font-semibold text-[var(--text-primary)] mb-2">{listing.title}</h3>
+                <p className="text-sm text-[var(--text-secondary)] line-clamp-2 mb-3 flex-1">
+                  {listing.description}
+                </p>
+
+                {/* Tags */}
+                <div className="flex flex-wrap gap-1 mb-4">
+                  {listing.tags.map((tag) => (
+                    <Badge key={tag} variant="outline" size="sm">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+
+                {/* Action */}
+                <Button
+                  variant="outline"
+                  className="w-full mt-auto"
+                  onClick={() => setSelectedListing(listing)}
+                >
+                  View Details
+                </Button>
+              </Card>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       ) : (
         <EmptyState
           title="No listings found"
@@ -244,11 +275,11 @@ export default function Explore() {
         >
           <div className="space-y-6">
             {/* User Info */}
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+            <div className="flex items-center gap-4 p-4 bg-[var(--bg-surface-highlight)] rounded-xl">
               <Avatar name={selectedListing.userName} src={selectedListing.userPhoto} size="lg" />
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">{selectedListing.userName}</h3>
-                <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                <h3 className="font-semibold text-[var(--text-primary)]">{selectedListing.userName}</h3>
+                <div className="flex items-center gap-4 mt-1 text-sm text-[var(--text-secondary)]">
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
                     {selectedListing.availability}
@@ -262,7 +293,7 @@ export default function Explore() {
               </div>
               <Badge
                 variant={selectedListing.type === 'offer' ? 'success' : 'primary'}
-                size="lg"
+                size="md"
               >
                 {selectedListing.type === 'offer' ? 'Offering' : 'Requesting'}
               </Badge>
@@ -270,13 +301,13 @@ export default function Explore() {
 
             {/* Description */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">About this {selectedListing.type === 'offer' ? 'offer' : 'request'}</h4>
-              <p className="text-gray-600 leading-relaxed">{selectedListing.description}</p>
+              <h4 className="font-medium text-[var(--text-primary)] mb-2">About this {selectedListing.type === 'offer' ? 'offer' : 'request'}</h4>
+              <p className="text-[var(--text-secondary)] leading-relaxed">{selectedListing.description}</p>
             </div>
 
             {/* Tags */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">Skills / Topics</h4>
+              <h4 className="font-medium text-[var(--text-primary)] mb-2">Skills / Topics</h4>
               <div className="flex flex-wrap gap-2">
                 {selectedListing.tags.map((tag) => (
                   <Badge key={tag} variant="primary" size="md">

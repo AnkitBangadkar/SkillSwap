@@ -15,11 +15,22 @@ import {
   CollegeVerification,
 } from './pages';
 import { useAuthStore } from './stores/authStore';
+import { useUIStore } from './stores/uiStore';
 import { ROUTES } from './lib/constants';
 import { LoadingScreen } from './components/ui';
 
 function App() {
   const { initialize, isLoading, isAuthenticated } = useAuthStore();
+  const { theme } = useUIStore();
+
+  // Initialize theme
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   useEffect(() => {
     const unsubscribe = initialize();
@@ -80,6 +91,16 @@ function App() {
         />
         <Route
           path={ROUTES.createListing}
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <CreateListing />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/listings/:id/edit"
           element={
             <ProtectedRoute>
               <MainLayout>

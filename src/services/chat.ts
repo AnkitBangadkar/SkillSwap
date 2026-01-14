@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  setDoc,
   addDoc,
   getDoc,
   getDocs,
@@ -34,11 +35,20 @@ export async function createChat(
   user2Name: string,
   user2Photo: string
 ): Promise<string> {
-  // Check if chat already exists between these users for this listing
-  const existingChat = await findExistingChat(user1Id, user2Id, listingId);
-  if (existingChat) return existingChat;
+  // Generate a deterministic chat ID to prevent duplicates and avoid complex queries
+  // Format: listingId_participant1_participant2 (participants sorted alphabetically)
+  const sortedParticipants = [user1Id, user2Id].sort();
+  const chatId = `${listingId}_${sortedParticipants[0]}_${sortedParticipants[1]}`;
   
-  const docRef = await addDoc(collection(db, CHATS_COLLECTION), {
+  const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
+  const chatDocSnap = await getDoc(chatDocRef);
+  
+  if (chatDocSnap.exists()) {
+    return chatId;
+  }
+  
+  // Create new chat document
+  await setDoc(chatDocRef, {
     participants: [user1Id, user2Id],
     participantDetails: {
       [user1Id]: { name: user1Name, photoURL: user1Photo },
@@ -56,35 +66,20 @@ export async function createChat(
     createdAt: serverTimestamp(),
   });
   
-  return docRef.id;
+  return chatId;
 }
 
 // ============================================
-// Find Existing Chat
+// Find Existing Chat (Deprecated - kept for reference but unused by createChat)
 // ============================================
 
-async function findExistingChat(
-  user1Id: string,
-  user2Id: string,
-  listingId: string
-): Promise<string | null> {
-  const q = query(
-    collection(db, CHATS_COLLECTION),
-    where('participants', 'array-contains', user1Id),
-    where('listingId', '==', listingId)
-  );
-  
-  const querySnapshot = await getDocs(q);
-  
-  for (const doc of querySnapshot.docs) {
-    const data = doc.data();
-    if (data.participants.includes(user2Id)) {
-      return doc.id;
-    }
-  }
-  
-  return null;
-}
+// async function findExistingChat(
+//   user1Id: string,
+//   user2Id: string,
+//   listingId: string
+// ): Promise<string | null> {
+//   return null;
+// }
 
 // ============================================
 // Get User's Chats

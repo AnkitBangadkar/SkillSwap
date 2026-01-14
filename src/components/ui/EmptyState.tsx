@@ -28,12 +28,12 @@ export function EmptyState({
         className
       )}
     >
-      <div className="flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 text-gray-400 mb-4">
+      <div className="flex items-center justify-center h-16 w-16 rounded-full bg-[var(--bg-surface-highlight)] text-[var(--text-tertiary)] mb-4">
         {icon || <FileQuestion className="h-8 w-8" />}
       </div>
-      <h3 className="text-lg font-medium text-gray-900 mb-1">{title}</h3>
+      <h3 className="text-lg font-display font-semibold text-[var(--text-primary)] mb-1">{title}</h3>
       {description && (
-        <p className="text-sm text-gray-500 max-w-sm mb-4">{description}</p>
+        <p className="text-sm text-[var(--text-secondary)] max-w-sm mb-4">{description}</p>
       )}
       {action && (
         <Button onClick={action.onClick}>{action.label}</Button>

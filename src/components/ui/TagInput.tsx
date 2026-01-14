@@ -68,9 +68,9 @@ export function TagInput({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5 ml-1">
           {label}
-          <span className="text-gray-400 font-normal ml-2">
+          <span className="text-[var(--text-tertiary)] font-normal ml-2">
             ({value.length}/{maxTags})
           </span>
         </label>
@@ -78,9 +78,9 @@ export function TagInput({
 
       <div
         className={cn(
-          'relative rounded-lg border border-gray-300 bg-white',
-          'focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent',
-          error && 'border-red-500 focus-within:ring-red-500'
+          'relative rounded-xl border border-[var(--border-default)] bg-[var(--bg-app)] transition-all duration-200',
+          'focus-within:ring-2 focus-within:ring-[var(--color-primary-500)] focus-within:border-transparent',
+          error && 'border-[var(--color-error)] focus-within:ring-[var(--color-error)]'
         )}
       >
         {/* Selected Tags */}
@@ -91,7 +91,7 @@ export function TagInput({
               <button
                 type="button"
                 onClick={() => handleRemoveTag(tag)}
-                className="ml-1 hover:bg-indigo-200 rounded-full p-0.5"
+                className="ml-1 hover:bg-[var(--color-primary-200)] dark:hover:bg-[var(--color-primary-800)] rounded-full p-0.5"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -108,7 +108,7 @@ export function TagInput({
               onBlur={() => setTimeout(() => setIsOpen(false), 200)}
               onKeyDown={handleKeyDown}
               placeholder={value.length === 0 ? placeholder : ''}
-              className="flex-1 min-w-[120px] border-none outline-none text-sm py-1 px-1"
+              className="flex-1 min-w-[120px] border-none outline-none text-sm py-1 px-1 bg-transparent text-[var(--text-primary)] placeholder-[var(--text-tertiary)]"
             />
           )}
         </div>
@@ -121,7 +121,7 @@ export function TagInput({
               setIsOpen(!isOpen);
               inputRef.current?.focus();
             }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
           >
             <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
           </button>
@@ -129,16 +129,16 @@ export function TagInput({
 
         {/* Dropdown */}
         {isOpen && canAddMore && (
-          <div className="absolute z-10 left-0 right-0 mt-1 bg-white rounded-lg border border-gray-200 shadow-lg max-h-64 overflow-hidden">
+          <div className="absolute z-10 left-0 right-0 mt-1 bg-[var(--bg-surface)] rounded-xl border border-[var(--border-default)] shadow-xl max-h-64 overflow-hidden">
             <div className="flex">
               {/* Categories */}
-              <div className="w-1/3 border-r border-gray-200 bg-gray-50 max-h-64 overflow-y-auto">
+              <div className="w-1/3 border-r border-[var(--border-default)] bg-[var(--bg-surface-highlight)] max-h-64 overflow-y-auto">
                 <button
                   type="button"
                   onClick={() => setActiveCategory(null)}
                   className={cn(
-                    'w-full text-left px-3 py-2 text-sm hover:bg-gray-100',
-                    activeCategory === null && 'bg-indigo-50 text-indigo-700'
+                    'w-full text-left px-3 py-2 text-sm hover:bg-[var(--border-default)] text-[var(--text-secondary)]',
+                    activeCategory === null && 'bg-[var(--color-primary-100)] text-[var(--color-primary-700)] dark:bg-[var(--color-primary-900)] dark:text-[var(--color-primary-100)]'
                   )}
                 >
                   All
@@ -149,8 +149,8 @@ export function TagInput({
                     type="button"
                     onClick={() => setActiveCategory(cat.name)}
                     className={cn(
-                      'w-full text-left px-3 py-2 text-sm hover:bg-gray-100',
-                      activeCategory === cat.name && 'bg-indigo-50 text-indigo-700'
+                      'w-full text-left px-3 py-2 text-sm hover:bg-[var(--border-default)] text-[var(--text-secondary)]',
+                      activeCategory === cat.name && 'bg-[var(--color-primary-100)] text-[var(--color-primary-700)] dark:bg-[var(--color-primary-900)] dark:text-[var(--color-primary-100)]'
                     )}
                   >
                     {cat.name}
@@ -159,7 +159,7 @@ export function TagInput({
               </div>
 
               {/* Tags */}
-              <div className="w-2/3 max-h-64 overflow-y-auto p-2">
+              <div className="w-2/3 max-h-64 overflow-y-auto p-2 bg-[var(--bg-surface)]">
                 <div className="flex flex-wrap gap-1.5">
                   {(activeCategory
                     ? SKILL_CATEGORIES.find((c) => c.name === activeCategory)?.tags || []
@@ -172,7 +172,7 @@ export function TagInput({
                         key={tag}
                         type="button"
                         onClick={() => handleAddTag(tag)}
-                        className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700"
+                        className="px-2 py-1 text-xs rounded-full bg-[var(--bg-surface-highlight)] text-[var(--text-secondary)] hover:bg-[var(--color-primary-100)] hover:text-[var(--color-primary-700)] dark:hover:bg-[var(--color-primary-900)] dark:hover:text-[var(--color-primary-100)] border border-[var(--border-default)]"
                       >
                         {tag}
                       </button>
@@ -182,7 +182,7 @@ export function TagInput({
                   <button
                     type="button"
                     onClick={() => handleAddTag(inputValue)}
-                    className="mt-2 w-full text-left px-2 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded"
+                    className="mt-2 w-full text-left px-2 py-1 text-sm text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)] dark:hover:bg-[var(--color-primary-900)] rounded"
                   >
                     Add "{inputValue}"
                   </button>
@@ -193,7 +193,7 @@ export function TagInput({
         )}
       </div>
 
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-1.5 text-sm text-[var(--color-error)] ml-1">{error}</p>}
     </div>
   );
 }
