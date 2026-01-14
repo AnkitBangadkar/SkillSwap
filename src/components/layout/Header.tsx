@@ -116,8 +116,7 @@ export function Header() {
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 h-4 w-4 bg-[var(--color-error)] text-white text-xs rounded-full flex items-center justify-center shadow-sm">
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                  <span className="absolute top-1 right-1 h-2 w-2 bg-[var(--color-primary-500)] rounded-full shadow-sm ring-2 ring-[var(--bg-surface)]">
                   </span>
                 )}
               </button>
@@ -129,7 +128,7 @@ export function Header() {
                     <h3 className="font-semibold text-[var(--text-primary)] text-sm">Notifications</h3>
                     {unreadCount > 0 && (
                       <button 
-                        onClick={() => markAllAsRead()}
+                        onClick={() => user && markAllAsRead(user.id)}
                         className="text-xs text-[var(--color-primary-600)] hover:text-[var(--color-primary-700)] font-medium"
                       >
                         Mark all read
@@ -147,7 +146,7 @@ export function Header() {
                             !notification.read && "bg-[var(--color-primary-50)] dark:bg-[var(--color-primary-900)]/20"
                           )}
                           onClick={() => {
-                            markAsRead(notification.id);
+                            if (user) markAsRead(user.id, notification.id);
                             setShowNotifications(false);
                             if (notification.link) navigate(notification.link);
                           }}
