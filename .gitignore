@@ -39,4 +39,5 @@ desktop.ini
 
 # Temporary files
 temp/
+temp (exclude from git)/
 opencode.json
