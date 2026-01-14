@@ -213,13 +213,20 @@ export const AVAILABILITY_OPTIONS = [
 // Duration Options (in minutes)
 // ============================================
 
-export const DURATION_OPTIONS = [
-  { value: 30, label: '30 minutes' },
-  { value: 45, label: '45 minutes' },
-  { value: 60, label: '1 hour' },
-  { value: 90, label: '1.5 hours' },
-  { value: 120, label: '2 hours' },
-] as const;
+const generateDurationOptions = () => {
+  const options = [];
+  for (let i = 15; i <= 180; i += 15) {
+    const hours = Math.floor(i / 60);
+    const minutes = i % 60;
+    let label = '';
+    if (hours > 0) label += `${hours}h `;
+    if (minutes > 0) label += `${minutes}m`;
+    options.push({ value: i, label: label.trim() });
+  }
+  return options;
+};
+
+export const DURATION_OPTIONS = generateDurationOptions();
 
 // ============================================
 // Mode Options

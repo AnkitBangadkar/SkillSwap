@@ -20,8 +20,8 @@ import { ROUTES } from './lib/constants';
 import { LoadingScreen } from './components/ui';
 
 function App() {
-  const { initialize, isLoading, isAuthenticated } = useAuthStore();
-  const { theme } = useUIStore();
+  const { initialize, isLoading, isAuthenticated, user } = useAuthStore();
+  const { theme, initializeNotifications } = useUIStore();
 
   // Initialize theme
   useEffect(() => {
@@ -32,10 +32,19 @@ function App() {
     }
   }, [theme]);
 
+  // Initialize Auth
   useEffect(() => {
     const unsubscribe = initialize();
     return () => unsubscribe();
   }, [initialize]);
+
+  // Initialize Notifications
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const unsubscribe = initializeNotifications(user.id);
+      return () => unsubscribe();
+    }
+  }, [isAuthenticated, user, initializeNotifications]);
 
   if (isLoading) {
     return <LoadingScreen message="Loading SkillSwap..." />;

@@ -1,5 +1,10 @@
 import { create } from 'zustand';
 import type { Notification } from '../types';
+import { 
+  subscribeToNotifications, 
+  markNotificationAsRead, 
+  markAllNotificationsAsRead 
+} from '../services/notifications';
 
 interface UIState {
   // Theme
@@ -15,10 +20,9 @@ interface UIState {
   // Notifications
   notifications: Notification[];
   unreadCount: number;
-  addNotification: (notification: Omit<Notification, 'id' | 'createdAt'>) => void;
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
-  clearNotifications: () => void;
+  initializeNotifications: (userId: string) => () => void;
+  markAsRead: (userId: string, notificationId: string) => Promise<void>;
+  markAllAsRead: (userId: string) => Promise<void>;
 
   // Toast messages (simple in-app alerts)
   toasts: Toast[];
@@ -68,38 +72,43 @@ export const useUIStore = create<UIState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
   
-  addNotification: (notification) => {
-    const newNotification: Notification = {
-      ...notification,
-      id: crypto.randomUUID(),
-      read: false,
-      createdAt: new Date() as unknown as Notification['createdAt'],
-    };
-    
-    set((state) => ({
-      notifications: [newNotification, ...state.notifications],
-      unreadCount: state.unreadCount + 1,
-    }));
+  initializeNotifications: (userId: string) => {
+    const unsubscribe = subscribeToNotifications(userId, (notifications) => {
+      const unreadCount = notifications.filter(n => !n.read).length;
+      set({ notifications, unreadCount });
+    });
+    return unsubscribe;
   },
 
-  markAsRead: (id) => {
+  markAsRead: async (userId: string, notificationId: string) => {
+    // Optimistic update
     set((state) => ({
       notifications: state.notifications.map((n) =>
-        n.id === id ? { ...n, read: true } : n
+        n.id === notificationId ? { ...n, read: true } : n
       ),
       unreadCount: Math.max(0, state.unreadCount - 1),
     }));
+    
+    try {
+      await markNotificationAsRead(userId, notificationId);
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      // Revert if needed, but for read status it's usually fine to ignore sync errors temporarily
+    }
   },
 
-  markAllAsRead: () => {
+  markAllAsRead: async (userId: string) => {
+    // Optimistic update
     set((state) => ({
       notifications: state.notifications.map((n) => ({ ...n, read: true })),
       unreadCount: 0,
     }));
-  },
 
-  clearNotifications: () => {
-    set({ notifications: [], unreadCount: 0 });
+    try {
+      await markAllNotificationsAsRead(userId);
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
   },
 
   // Toasts

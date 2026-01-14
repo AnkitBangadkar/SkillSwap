@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Send, Loader2, MessageCircle, Calendar, X } from 'lucide-react';
-import { Card, Button, Avatar, EmptyState, Modal, Input, Select, Textarea } from '../components/ui';
+import { ArrowLeft, Send, Loader2, MessageCircle, Calendar, X, Clock, MapPin } from 'lucide-react';
+import { Card, Button, Avatar, EmptyState, Modal, Input, Select, Textarea, DatePicker, TimeInput } from '../components/ui';
 import { ROUTES, DURATION_OPTIONS } from '../lib/constants';
 import { getChat, subscribeToMessages, sendMessage, markChatAsRead } from '../services/chat';
 import { createBooking } from '../services/bookings';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
+import { FadeIn, SlideUp } from '../components/ui/Motion';
 import type { Chat, Message } from '../types';
 
 export default function ChatRoom() {
@@ -301,69 +302,79 @@ export default function ChatRoom() {
       <Modal
         isOpen={showBookingModal}
         onClose={() => setShowBookingModal(false)}
-        title="Schedule a Session"
+        title="Schedule Session"
         size="md"
       >
-        <form onSubmit={handleCreateBooking} className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Request a skill exchange session with {other?.name}. They will receive a notification to confirm.
+        <form onSubmit={handleCreateBooking} className="space-y-6">
+          <p className="text-sm text-[var(--text-secondary)]">
+            Request a skill exchange session with <span className="font-bold text-[var(--text-primary)]">{other?.name}</span>.
           </p>
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              type="date"
-              label="Date"
-              value={bookingDate}
-              onChange={(e) => setBookingDate(e.target.value)}
-              min={getMinDate()}
-              required
-            />
-            <Input
-              type="time"
-              label="Time"
-              value={bookingTime}
-              onChange={(e) => setBookingTime(e.target.value)}
-              required
+            <div className="space-y-1">
+              <DatePicker
+                label="Date"
+                value={bookingDate}
+                onChange={setBookingDate}
+                min={getMinDate()}
+              />
+            </div>
+            <div className="space-y-1">
+              <TimeInput
+                label="Time"
+                value={bookingTime}
+                onChange={setBookingTime}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase tracking-wide text-[var(--text-tertiary)]">Duration</label>
+            <Select
+              options={DURATION_OPTIONS.map((d) => ({
+                value: d.value.toString(),
+                label: d.label,
+              }))}
+              value={bookingDuration}
+              onChange={setBookingDuration}
             />
           </div>
 
-          <Select
-            label="Duration"
-            options={DURATION_OPTIONS.map((d) => ({
-              value: d.value.toString(),
-              label: d.label,
-            }))}
-            value={bookingDuration}
-            onChange={setBookingDuration}
-          />
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase tracking-wide text-[var(--text-tertiary)]">Location</label>
+            <div className="relative">
+              <Input
+                placeholder="e.g., Library Room 3, Zoom link..."
+                value={bookingLocation}
+                onChange={(e) => setBookingLocation(e.target.value)}
+                className="pl-10"
+              />
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-tertiary)] pointer-events-none" />
+            </div>
+          </div>
 
-          <Input
-            label="Location (optional)"
-            placeholder="e.g., Library Room 3, Zoom link, etc."
-            value={bookingLocation}
-            onChange={(e) => setBookingLocation(e.target.value)}
-          />
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase tracking-wide text-[var(--text-tertiary)]">Notes</label>
+            <Textarea
+              placeholder="What specific topics do you want to cover?"
+              value={bookingNotes}
+              onChange={(e) => setBookingNotes(e.target.value)}
+              rows={3}
+            />
+          </div>
 
-          <Textarea
-            label="Notes (optional)"
-            placeholder="Any specific topics you'd like to cover..."
-            value={bookingNotes}
-            onChange={(e) => setBookingNotes(e.target.value)}
-            rows={3}
-          />
-
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-4 border-t border-[var(--border-default)]">
             <Button
               type="button"
               variant="outline"
-              className="flex-1"
+              className="flex-1 h-12"
               onClick={() => setShowBookingModal(false)}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="flex-1"
+              className="flex-1 h-12"
               disabled={!bookingDate || !bookingTime || isBooking}
             >
               {isBooking ? (
@@ -373,7 +384,6 @@ export default function ChatRoom() {
                 </>
               ) : (
                 <>
-                  <Calendar className="h-4 w-4 mr-2" />
                   Send Request
                 </>
               )}

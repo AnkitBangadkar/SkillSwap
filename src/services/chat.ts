@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Chat, Message, SendMessageData } from '../types';
+import { createNotification } from './notifications';
 
 const CHATS_COLLECTION = 'chats';
 const MESSAGES_SUBCOLLECTION = 'messages';
@@ -65,6 +66,15 @@ export async function createChat(
     },
     createdAt: serverTimestamp(),
   });
+
+  // Notify the other user
+  await createNotification(
+    user2Id,
+    'new_match',
+    'New Match!',
+    `${user1Name} wants to connect regarding "${listingTitle}"`,
+    `/chats/${chatId}`
+  );
   
   return chatId;
 }
@@ -146,6 +156,16 @@ export async function sendMessage(
       lastMessageSenderId: userId,
       [`unreadCount.${otherUserId}`]: increment(1),
     });
+
+    // Notify the other user about the new message
+    const senderName = chatData.participantDetails[userId].name;
+    await createNotification(
+      otherUserId,
+      'new_message',
+      `Message from ${senderName}`,
+      text,
+      `/chats/${chatId}`
+    );
   }
   
   return messageDoc.id;

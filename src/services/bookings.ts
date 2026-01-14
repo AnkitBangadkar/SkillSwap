@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Booking, CreateBookingData, BookingStatus } from '../types';
+import { createNotification } from './notifications';
 
 const COLLECTION_NAME = 'bookings';
 
@@ -60,6 +61,15 @@ export async function createBooking(
   }
 
   const docRef = await addDoc(collection(db, COLLECTION_NAME), bookingData);
+
+  // Notify the provider
+  await createNotification(
+    data.providerId,
+    'booking_request',
+    'New Session Request',
+    `${requesterName} requested a session for "${listingData.title}"`,
+    '/bookings'
+  );
 
   return docRef.id;
 }
@@ -144,11 +154,32 @@ export async function updateBookingStatus(
 }
 
 // ============================================
+// Helper to get booking details for notifications
+// ============================================
+async function getBookingDetails(bookingId: string) {
+  const docRef = doc(db, COLLECTION_NAME, bookingId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) return null;
+  return docSnap.data() as Booking;
+}
+
+// ============================================
 // Confirm Booking
 // ============================================
 
 export async function confirmBooking(bookingId: string): Promise<void> {
   await updateBookingStatus(bookingId, 'confirmed');
+  
+  const booking = await getBookingDetails(bookingId);
+  if (booking) {
+    await createNotification(
+      booking.requesterId,
+      'booking_confirmed',
+      'Session Confirmed!',
+      `${booking.providerName} confirmed your session for "${booking.listingTitle}"`,
+      '/bookings'
+    );
+  }
 }
 
 // ============================================
@@ -157,6 +188,17 @@ export async function confirmBooking(bookingId: string): Promise<void> {
 
 export async function declineBooking(bookingId: string): Promise<void> {
   await updateBookingStatus(bookingId, 'declined');
+
+  const booking = await getBookingDetails(bookingId);
+  if (booking) {
+    await createNotification(
+      booking.requesterId,
+      'booking_declined',
+      'Session Declined',
+      `${booking.providerName} declined your session request`,
+      '/bookings'
+    );
+  }
 }
 
 // ============================================
