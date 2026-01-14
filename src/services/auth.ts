@@ -7,7 +7,6 @@ import {
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider, isFirebaseConfigured } from './firebase';
 import type { User } from '../types';
-import { isAllowedEmail } from '../lib/utils';
 import { APP_CONFIG } from '../lib/constants';
 
 // ============================================
@@ -36,14 +35,8 @@ export async function signInWithGoogle(): Promise<User> {
     const result = await signInWithPopup(auth, googleProvider);
     const firebaseUser = result.user;
 
-    // Check if email domain is allowed
-    if (!firebaseUser.email || !isAllowedEmail(firebaseUser.email)) {
-      // Sign out the user immediately
-      await firebaseSignOut(auth);
-      throw new Error(AUTH_ERRORS.INVALID_DOMAIN);
-    }
-
     // Create or update user document in Firestore
+    // College email verification is handled separately
     const user = await createOrUpdateUser(firebaseUser);
     return user;
   } catch (error: unknown) {
@@ -72,12 +65,21 @@ async function createOrUpdateUser(firebaseUser: FirebaseUser): Promise<User> {
   const userRef = doc(db, 'users', firebaseUser.uid);
   const userSnap = await getDoc(userRef);
 
-  const userData: Omit<User, 'id'> & { id?: string } = {
+  const existingData = userSnap.exists() ? userSnap.data() : null;
+
+  // Build user data - Firestore doesn't accept undefined values
+  const userData: Record<string, unknown> = {
     name: firebaseUser.displayName || 'Anonymous',
     email: firebaseUser.email || '',
     photoURL: firebaseUser.photoURL || '',
-    createdAt: serverTimestamp() as User['createdAt'],
+    createdAt: existingData?.createdAt || serverTimestamp(),
+    isCollegeVerified: existingData?.isCollegeVerified ?? false,
   };
+
+  // Only include collegeEmail if it exists (Firestore rejects undefined)
+  if (existingData?.collegeEmail) {
+    userData.collegeEmail = existingData.collegeEmail;
+  }
 
   if (!userSnap.exists()) {
     // Create new user
@@ -130,12 +132,7 @@ export function onAuthStateChange(
 ): () => void {
   return onAuthStateChanged(auth, async (firebaseUser) => {
     if (firebaseUser) {
-      // Verify email domain
-      if (!firebaseUser.email || !isAllowedEmail(firebaseUser.email)) {
-        await firebaseSignOut(auth);
-        callback(null);
-        return;
-      }
+      // Allow any Google account - college verification is separate
 
       const user = await getCurrentUser();
       callback(user);

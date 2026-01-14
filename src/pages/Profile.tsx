@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Camera, Mail, Calendar, Edit2, Save, X } from 'lucide-react';
-import { Card, CardContent, Button, Input, Avatar, Badge } from '../components/ui';
+import { Card, Button, Input, Avatar, Badge } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import { formatDate } from '../lib/utils';
@@ -96,12 +96,20 @@ export default function Profile() {
                 </button>
               </div>
             )}
-            
+
             <div className="flex flex-col sm:flex-row items-center gap-3 text-sm text-gray-500">
               <div className="flex items-center gap-1">
                 <Mail className="h-4 w-4" />
                 {user.email}
               </div>
+              {user.collegeEmail && (
+                <div className="flex items-center gap-1 text-indigo-600">
+                  <Badge variant="success" size="sm" className="gap-1">
+                    ✓ Verified
+                  </Badge>
+                  {user.collegeEmail}
+                </div>
+              )}
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
                 Joined {user.createdAt ? formatDate(user.createdAt.toDate()) : 'Recently'}

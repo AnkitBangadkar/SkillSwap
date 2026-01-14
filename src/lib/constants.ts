@@ -6,16 +6,16 @@ export const APP_CONFIG = {
   name: 'SkillSwap',
   description: 'Campus Skill Sharing Marketplace',
   version: '1.0.0',
-  
+
   // Email domain restriction - easily tweakable
   allowedEmailDomains: ['muj.manipal.edu'],
-  
+
   // Pagination
   defaultPageSize: 20,
-  
+
   // Chat
   maxMessageLength: 1000,
-  
+
   // Listings
   maxTags: 5,
   maxTitleLength: 100,
@@ -250,6 +250,7 @@ export const BOOKING_STATUS_LABELS = {
 export const ROUTES = {
   home: '/',
   login: '/login',
+  verifyCollege: '/verify-college',
   dashboard: '/dashboard',
   explore: '/explore',
   createListing: '/listings/new',

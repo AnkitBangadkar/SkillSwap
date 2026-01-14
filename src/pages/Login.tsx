@@ -86,9 +86,11 @@ export default function Login() {
             Sign in with Google
           </Button>
 
-          {/* Domain restriction notice */}
+          {/* Two-step verification notice */}
           <p className="mt-6 text-center text-sm text-gray-500">
-            Only <span className="font-medium">@{APP_CONFIG.allowedEmailDomains[0]}</span> accounts are allowed
+            Sign in with any Google account. You'll verify your{' '}
+            <span className="font-medium">@{APP_CONFIG.allowedEmailDomains[0]}</span>{' '}
+            email next.
           </p>
         </div>
 

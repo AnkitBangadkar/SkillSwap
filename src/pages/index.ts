@@ -8,3 +8,4 @@ export { default as Chats } from './Chats';
 export { default as ChatRoom } from './ChatRoom';
 export { default as Bookings } from './Bookings';
 export { default as Profile } from './Profile';
+export { default as CollegeVerification } from './CollegeVerification';

@@ -12,6 +12,7 @@ import {
   ChatRoom,
   Bookings,
   Profile,
+  CollegeVerification,
 } from './pages';
 import { useAuthStore } from './stores/authStore';
 import { ROUTES } from './lib/constants';
@@ -46,7 +47,17 @@ function App() {
           }
         />
 
-        {/* Protected Routes */}
+        {/* College Verification Route (authenticated but not verified) */}
+        <Route
+          path={ROUTES.verifyCollege}
+          element={
+            <ProtectedRoute requireVerification={false}>
+              <CollegeVerification />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected Routes (require verification) */}
         <Route
           path={ROUTES.dashboard}
           element={

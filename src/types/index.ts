@@ -10,6 +10,11 @@ export interface User {
   email: string;
   photoURL: string;
   createdAt: Timestamp;
+  // College email verification
+  collegeEmail?: string;
+  isCollegeVerified: boolean;
+  verificationCode?: string;
+  verificationExpiry?: Timestamp;
 }
 
 export interface UserProfile extends User {
@@ -131,11 +136,11 @@ export interface CreateBookingData {
 // Notification Types
 // ============================================
 
-export type NotificationType = 
-  | 'new_match' 
-  | 'new_message' 
-  | 'booking_request' 
-  | 'booking_confirmed' 
+export type NotificationType =
+  | 'new_match'
+  | 'new_message'
+  | 'booking_request'
+  | 'booking_confirmed'
   | 'booking_declined';
 
 export interface Notification {

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { User } from '../types';
-import { signInWithGoogle, signOut, onAuthStateChange, AUTH_ERRORS } from '../services/auth';
+import { signInWithGoogle, signOut, onAuthStateChange, getCurrentUser, AUTH_ERRORS } from '../services/auth';
 import { isFirebaseConfigured } from '../services/firebase';
 
 interface AuthState {
@@ -9,11 +9,12 @@ interface AuthState {
   isAuthenticated: boolean;
   error: string | null;
   isFirebaseReady: boolean;
-  
+
   // Actions
   initialize: () => () => void;
   login: () => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -32,7 +33,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         error: AUTH_ERRORS.FIREBASE_NOT_CONFIGURED,
         isFirebaseReady: false,
       });
-      return () => {}; // Return empty unsubscribe
+      return () => { }; // Return empty unsubscribe
     }
 
     // Subscribe to auth state changes
@@ -50,14 +51,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async () => {
     const { isFirebaseReady } = get();
-    
+
     if (!isFirebaseReady) {
       set({ error: AUTH_ERRORS.FIREBASE_NOT_CONFIGURED });
       return;
     }
 
     set({ isLoading: true, error: null });
-    
+
     try {
       const user = await signInWithGoogle();
       set({
@@ -76,7 +77,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     set({ isLoading: true });
-    
+
     try {
       await signOut();
       set({
@@ -95,5 +96,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   clearError: () => {
     set({ error: null });
+  },
+
+  refreshUser: async () => {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        set({ user });
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
   },
 }));
