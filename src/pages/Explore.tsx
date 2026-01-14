@@ -1,93 +1,46 @@
-import { useState } from 'react';
-import { Search, Filter, X } from 'lucide-react';
-import { Input, Button, Badge, Card, Avatar, EmptyState, Select } from '../components/ui';
-import { SKILL_CATEGORIES, MODE_OPTIONS } from '../lib/constants';
-import type { ListingType, ListingMode } from '../types';
-
-// Mock data for demo
-const mockListings = [
-  {
-    id: '1',
-    userId: 'user1',
-    userName: 'Ananya Gupta',
-    userPhoto: '',
-    title: 'React & TypeScript Tutoring',
-    description: 'I can help you learn React with TypeScript from basics to advanced concepts. Experienced with hooks, context, and state management.',
-    type: 'offer' as ListingType,
-    tags: ['React', 'TypeScript', 'Web Development'],
-    availability: 'Weekday evenings',
-    mode: 'both' as ListingMode,
-    status: 'active' as const,
-    createdAt: new Date(),
-  },
-  {
-    id: '2',
-    userId: 'user2',
-    userName: 'Vikram Singh',
-    userPhoto: '',
-    title: 'Need help with Machine Learning',
-    description: 'Looking for someone to explain ML concepts and help with my project on neural networks.',
-    type: 'request' as ListingType,
-    tags: ['Machine Learning', 'Python', 'Data Science'],
-    availability: 'Flexible',
-    mode: 'online' as ListingMode,
-    status: 'active' as const,
-    createdAt: new Date(),
-  },
-  {
-    id: '3',
-    userId: 'user3',
-    userName: 'Meera Patel',
-    userPhoto: '',
-    title: 'Guitar Lessons for Beginners',
-    description: 'I\'ve been playing guitar for 5 years. Can teach basics, chords, and some popular songs.',
-    type: 'offer' as ListingType,
-    tags: ['Guitar', 'Music'],
-    availability: 'Weekend afternoons',
-    mode: 'offline' as ListingMode,
-    status: 'active' as const,
-    createdAt: new Date(),
-  },
-  {
-    id: '4',
-    userId: 'user4',
-    userName: 'Arjun Reddy',
-    userPhoto: '',
-    title: 'Spanish Language Exchange',
-    description: 'Native Spanish speaker looking to practice English. Can help you with Spanish in return!',
-    type: 'offer' as ListingType,
-    tags: ['Spanish', 'English', 'Languages'],
-    availability: 'Weekday mornings',
-    mode: 'both' as ListingMode,
-    status: 'active' as const,
-    createdAt: new Date(),
-  },
-  {
-    id: '5',
-    userId: 'user5',
-    userName: 'Sneha Krishnan',
-    userPhoto: '',
-    title: 'UI/UX Design Mentorship',
-    description: 'Senior design student offering mentorship in UI/UX. Experienced with Figma, user research, and prototyping.',
-    type: 'offer' as ListingType,
-    tags: ['UI/UX Design', 'Figma', 'Graphic Design'],
-    availability: 'Flexible',
-    mode: 'online' as ListingMode,
-    status: 'active' as const,
-    createdAt: new Date(),
-  },
-];
+import { useState, useEffect } from 'react';
+import { Search, Filter, X, Loader2, MessageCircle, Clock, MapPin } from 'lucide-react';
+import { Input, Button, Badge, Card, Avatar, EmptyState, Select, Modal } from '../components/ui';
+import { SKILL_CATEGORIES, MODE_OPTIONS, ROUTES } from '../lib/constants';
+import { getListings } from '../services/listings';
+import { useAuthStore } from '../stores/authStore';
+import { useUIStore } from '../stores/uiStore';
+import type { Listing } from '../types';
 
 export default function Explore() {
+  const { user } = useAuthStore();
+  const { showToast } = useUIStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [modeFilter, setModeFilter] = useState<string>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Filter listings
-  const filteredListings = mockListings.filter((listing) => {
-    // Search query
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+
+  // Fetch listings from Firestore
+  useEffect(() => {
+    async function fetchListings() {
+      setIsLoading(true);
+      try {
+        const result = await getListings();
+        // Filter out user's own listings
+        const otherListings = result.items.filter(l => l.userId !== user?.id);
+        setListings(otherListings);
+      } catch (error) {
+        console.error('Failed to fetch listings:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchListings();
+  }, [user]);
+
+  // Filter listings client-side
+  const filteredListings = listings.filter((listing) => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesSearch =
@@ -96,21 +49,14 @@ export default function Explore() {
         listing.tags.some((tag) => tag.toLowerCase().includes(query));
       if (!matchesSearch) return false;
     }
-
-    // Type filter
     if (typeFilter && listing.type !== typeFilter) return false;
-
-    // Mode filter
     if (modeFilter && listing.mode !== modeFilter && listing.mode !== 'both') return false;
-
-    // Tags filter
     if (selectedTags.length > 0) {
       const hasMatchingTag = selectedTags.some((tag) =>
         listing.tags.map((t) => t.toLowerCase()).includes(tag.toLowerCase())
       );
       if (!hasMatchingTag) return false;
     }
-
     return true;
   });
 
@@ -119,6 +65,14 @@ export default function Explore() {
     setTypeFilter('');
     setModeFilter('');
     setSelectedTags([]);
+  };
+
+  const handleConnect = (listing: Listing) => {
+    showToast({
+      type: 'success',
+      message: `Connection request sent to ${listing.userName}!`,
+    });
+    setSelectedListing(null);
   };
 
   const hasActiveFilters = searchQuery || typeFilter || modeFilter || selectedTags.length > 0;
@@ -158,7 +112,6 @@ export default function Explore() {
           </Button>
         </div>
 
-        {/* Filter Panel */}
         {showFilters && (
           <Card padding="md" className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -181,7 +134,6 @@ export default function Explore() {
               />
             </div>
 
-            {/* Category Tags */}
             <div>
               <p className="text-sm font-medium text-gray-700 mb-2">Quick Filters</p>
               <div className="flex flex-wrap gap-2">
@@ -218,11 +170,15 @@ export default function Explore() {
 
       {/* Results Count */}
       <p className="text-sm text-gray-500">
-        Showing {filteredListings.length} of {mockListings.length} listings
+        Showing {filteredListings.length} of {listings.length} listings
       </p>
 
-      {/* Listings Grid */}
-      {filteredListings.length > 0 ? (
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        </div>
+      ) : filteredListings.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredListings.map((listing) => (
             <Card key={listing.id} hover padding="md" className="flex flex-col">
@@ -257,7 +213,11 @@ export default function Explore() {
               </div>
 
               {/* Action */}
-              <Button variant="outline" className="w-full">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setSelectedListing(listing)}
+              >
                 View Details
               </Button>
             </Card>
@@ -266,12 +226,85 @@ export default function Explore() {
       ) : (
         <EmptyState
           title="No listings found"
-          description="Try adjusting your search or filters"
+          description={listings.length === 0 ? "Be the first to create a listing!" : "Try adjusting your search or filters"}
           action={{
-            label: 'Clear Filters',
+            label: listings.length === 0 ? 'Create Listing' : 'Clear Filters',
             onClick: clearFilters,
           }}
         />
+      )}
+
+      {/* Listing Detail Modal */}
+      {selectedListing && (
+        <Modal
+          isOpen={!!selectedListing}
+          onClose={() => setSelectedListing(null)}
+          title={selectedListing.title}
+          size="lg"
+        >
+          <div className="space-y-6">
+            {/* User Info */}
+            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+              <Avatar name={selectedListing.userName} src={selectedListing.userPhoto} size="lg" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">{selectedListing.userName}</h3>
+                <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {selectedListing.availability}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    {selectedListing.mode === 'online' ? 'Online only' :
+                      selectedListing.mode === 'offline' ? 'In-person only' : 'Online or In-person'}
+                  </span>
+                </div>
+              </div>
+              <Badge
+                variant={selectedListing.type === 'offer' ? 'success' : 'primary'}
+                size="lg"
+              >
+                {selectedListing.type === 'offer' ? 'Offering' : 'Requesting'}
+              </Badge>
+            </div>
+
+            {/* Description */}
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">About this {selectedListing.type === 'offer' ? 'offer' : 'request'}</h4>
+              <p className="text-gray-600 leading-relaxed">{selectedListing.description}</p>
+            </div>
+
+            {/* Tags */}
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Skills / Topics</h4>
+              <div className="flex flex-wrap gap-2">
+                {selectedListing.tags.map((tag) => (
+                  <Badge key={tag} variant="primary" size="md">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setSelectedListing(null)}
+              >
+                Close
+              </Button>
+              <Button
+                className="flex-1"
+                leftIcon={<MessageCircle className="h-4 w-4" />}
+                onClick={() => handleConnect(selectedListing)}
+              >
+                Connect with {selectedListing.userName.split(' ')[0]}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

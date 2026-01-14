@@ -14,11 +14,15 @@ import {
 import { ROUTES, MODE_OPTIONS, AVAILABILITY_OPTIONS, APP_CONFIG } from '../lib/constants';
 import type { CreateListingData, ListingMode } from '../types';
 import { useUIStore } from '../stores/uiStore';
+import { useAuthStore } from '../stores/authStore';
+import { createListing } from '../services/listings';
+import { generateTagSuggestions } from '../services/gemini';
 
 export default function CreateListing() {
   const navigate = useNavigate();
   const { showToast } = useUIStore();
-  
+  const { user } = useAuthStore();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGettingSuggestions, setIsGettingSuggestions] = useState(false);
   const [formData, setFormData] = useState<CreateListingData>({
@@ -64,22 +68,34 @@ export default function CreateListing() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validate()) return;
+    if (!user) {
+      showToast({
+        type: 'error',
+        message: 'You must be logged in to create a listing.',
+      });
+      return;
+    }
 
     setIsSubmitting(true);
-    
+
     try {
-      // TODO: Replace with actual Firestore create
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
-      
+      // Create listing in Firestore
+      await createListing(
+        user.id,
+        user.name,
+        user.photoURL,
+        formData
+      );
+
       showToast({
         type: 'success',
         message: 'Listing created successfully!',
       });
-      
+
       navigate(ROUTES.dashboard);
-    } catch (error) {
+    } catch {
       showToast({
         type: 'error',
         message: 'Failed to create listing. Please try again.',
@@ -99,23 +115,28 @@ export default function CreateListing() {
     }
 
     setIsGettingSuggestions(true);
-    
+
     try {
-      // TODO: Replace with actual Gemini API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      // Mock AI suggestions
-      const suggestedTags = ['Python', 'Data Science'];
-      setFormData((prev) => ({
-        ...prev,
-        tags: [...new Set([...prev.tags, ...suggestedTags])].slice(0, APP_CONFIG.maxTags),
-      }));
-      
-      showToast({
-        type: 'success',
-        message: 'AI suggested some tags for you!',
-      });
-    } catch (error) {
+      // Use Gemini AI to suggest tags
+      const suggestedTags = await generateTagSuggestions(formData.title, formData.description);
+
+      if (suggestedTags.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          tags: [...new Set([...prev.tags, ...suggestedTags])].slice(0, APP_CONFIG.maxTags),
+        }));
+
+        showToast({
+          type: 'success',
+          message: 'AI suggested some tags for you!',
+        });
+      } else {
+        showToast({
+          type: 'info',
+          message: 'No suggestions available. Try adding more details.',
+        });
+      }
+    } catch {
       showToast({
         type: 'error',
         message: 'Failed to get suggestions. Try again.',
@@ -154,11 +175,10 @@ export default function CreateListing() {
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, type: 'offer' })}
-                  className={`p-4 rounded-xl border-2 text-left transition-all ${
-                    formData.type === 'offer'
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${formData.type === 'offer'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                    }`}
                 >
                   <p className="font-semibold text-gray-900">Offer a Skill</p>
                   <p className="text-sm text-gray-500 mt-1">
@@ -168,11 +188,10 @@ export default function CreateListing() {
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, type: 'request' })}
-                  className={`p-4 rounded-xl border-2 text-left transition-all ${
-                    formData.type === 'request'
-                      ? 'border-indigo-500 bg-indigo-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${formData.type === 'request'
+                    ? 'border-indigo-500 bg-indigo-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                    }`}
                 >
                   <p className="font-semibold text-gray-900">Request Help</p>
                   <p className="text-sm text-gray-500 mt-1">
@@ -262,11 +281,10 @@ export default function CreateListing() {
                     key={mode.value}
                     type="button"
                     onClick={() => setFormData({ ...formData, mode: mode.value as ListingMode })}
-                    className={`flex-1 py-2 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
-                      formData.mode === mode.value
-                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                    }`}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 text-sm font-medium transition-all ${formData.mode === mode.value
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
                   >
                     {mode.label}
                   </button>

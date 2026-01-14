@@ -1,53 +1,45 @@
-import { Link } from 'react-router-dom';
-import { PlusCircle, Compass, Sparkles, MessageCircle, Calendar, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { PlusCircle, Compass, Sparkles, MessageCircle, Calendar, TrendingUp, Loader2 } from 'lucide-react';
 import { Card, CardContent, Button, Badge, Avatar, EmptyState } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
 import { ROUTES } from '../lib/constants';
-
-// Mock data for demo - will be replaced with Firestore data
-const mockUserListings = [
-  {
-    id: '1',
-    title: 'Python for Data Science',
-    type: 'offer' as const,
-    tags: ['Python', 'Data Science', 'Machine Learning'],
-    status: 'active' as const,
-  },
-  {
-    id: '2',
-    title: 'Guitar Basics',
-    type: 'request' as const,
-    tags: ['Guitar', 'Music'],
-    status: 'active' as const,
-  },
-];
-
-const mockRecentMatches = [
-  {
-    id: '1',
-    userName: 'Priya Sharma',
-    userPhoto: '',
-    listingTitle: 'React & TypeScript Help',
-    matchScore: 85,
-  },
-  {
-    id: '2',
-    userName: 'Rahul Verma',
-    userPhoto: '',
-    listingTitle: 'Guitar Lessons',
-    matchScore: 72,
-  },
-];
-
-const quickStats = [
-  { label: 'Active Listings', value: 2, icon: TrendingUp },
-  { label: 'Matches', value: 5, icon: Sparkles },
-  { label: 'Messages', value: 3, icon: MessageCircle },
-  { label: 'Sessions', value: 1, icon: Calendar },
-];
+import { getUserListings } from '../services/listings';
+import type { Listing } from '../types';
 
 export default function Dashboard() {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
+
+  const [userListings, setUserListings] = useState<Listing[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch user's listings from Firestore
+  useEffect(() => {
+    async function fetchData() {
+      if (!user) return;
+
+      setIsLoading(true);
+      try {
+        const listings = await getUserListings(user.id);
+        setUserListings(listings);
+      } catch (error) {
+        console.error('Failed to fetch listings:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [user]);
+
+  // Calculate stats from real data
+  const quickStats = [
+    { label: 'Active Listings', value: userListings.filter(l => l.status === 'active').length, icon: TrendingUp },
+    { label: 'Matches', value: 0, icon: Sparkles }, // Will be populated when matches are implemented
+    { label: 'Messages', value: 0, icon: MessageCircle }, // Will be populated when chats are implemented
+    { label: 'Sessions', value: 0, icon: Calendar }, // Will be populated when bookings are implemented
+  ];
 
   return (
     <div className="space-y-8">
@@ -94,10 +86,14 @@ export default function Dashboard() {
               View all
             </Link>
           </div>
-          
-          {mockUserListings.length > 0 ? (
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+            </div>
+          ) : userListings.length > 0 ? (
             <div className="space-y-3">
-              {mockUserListings.map((listing) => (
+              {userListings.slice(0, 3).map((listing) => (
                 <Card key={listing.id} hover padding="md">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -107,6 +103,12 @@ export default function Dashboard() {
                           size="sm"
                         >
                           {listing.type === 'offer' ? 'Offering' : 'Requesting'}
+                        </Badge>
+                        <Badge
+                          variant={listing.status === 'active' ? 'success' : 'default'}
+                          size="sm"
+                        >
+                          {listing.status}
                         </Badge>
                       </div>
                       <h3 className="font-medium text-gray-900">{listing.title}</h3>
@@ -128,7 +130,7 @@ export default function Dashboard() {
               description="Create your first listing to start matching with peers"
               action={{
                 label: 'Create Listing',
-                onClick: () => {},
+                onClick: () => navigate(ROUTES.createListing),
               }}
             />
           )}
@@ -142,39 +144,16 @@ export default function Dashboard() {
               View all
             </Link>
           </div>
-          
-          {mockRecentMatches.length > 0 ? (
-            <div className="space-y-3">
-              {mockRecentMatches.map((match) => (
-                <Card key={match.id} hover padding="md">
-                  <div className="flex items-center gap-3">
-                    <Avatar name={match.userName} src={match.userPhoto} size="md" />
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{match.userName}</h3>
-                      <p className="text-sm text-gray-500">{match.listingTitle}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-1 text-indigo-600">
-                        <Sparkles className="h-4 w-4" />
-                        <span className="font-medium">{match.matchScore}%</span>
-                      </div>
-                      <span className="text-xs text-gray-500">match</span>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={<Sparkles className="h-8 w-8" />}
-              title="No matches yet"
-              description="Create listings to start getting matched with peers"
-              action={{
-                label: 'Explore Listings',
-                onClick: () => {},
-              }}
-            />
-          )}
+
+          <EmptyState
+            icon={<Sparkles className="h-8 w-8" />}
+            title="No matches yet"
+            description="Create listings and explore to get AI-powered match suggestions"
+            action={{
+              label: 'Explore Listings',
+              onClick: () => navigate(ROUTES.explore),
+            }}
+          />
         </div>
       </div>
 
@@ -193,7 +172,7 @@ export default function Dashboard() {
             </div>
           </Card>
         </Link>
-        
+
         <Link to={ROUTES.matches}>
           <Card hover padding="md" className="group">
             <div className="flex items-center gap-3">
@@ -207,7 +186,7 @@ export default function Dashboard() {
             </div>
           </Card>
         </Link>
-        
+
         <Link to={ROUTES.chats}>
           <Card hover padding="md" className="group">
             <div className="flex items-center gap-3">
