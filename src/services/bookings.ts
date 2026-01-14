@@ -27,15 +27,21 @@ export async function createBooking(
   // Get listing info for the booking
   const listingRef = doc(db, 'listings', data.listingId);
   const listingSnap = await getDoc(listingRef);
-  
+
   if (!listingSnap.exists()) {
     throw new Error('Listing not found');
   }
-  
+
   const listingData = listingSnap.data();
-  
-  const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-    ...data,
+
+  // Build booking data - Firestore doesn't accept undefined values
+  const bookingData: Record<string, unknown> = {
+    chatId: data.chatId,
+    listingId: data.listingId,
+    providerId: data.providerId,
+    proposedDate: data.proposedDate,
+    proposedTime: data.proposedTime,
+    duration: data.duration,
     listingTitle: listingData.title,
     requesterId,
     requesterName,
@@ -43,10 +49,21 @@ export async function createBooking(
     status: 'pending',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  });
-  
+  };
+
+  // Only add optional fields if they have values
+  if (data.location) {
+    bookingData.location = data.location;
+  }
+  if (data.notes) {
+    bookingData.notes = data.notes;
+  }
+
+  const docRef = await addDoc(collection(db, COLLECTION_NAME), bookingData);
+
   return docRef.id;
 }
+
 
 // ============================================
 // Get Booking by ID
@@ -55,9 +72,9 @@ export async function createBooking(
 export async function getBooking(bookingId: string): Promise<Booking | null> {
   const docRef = doc(db, COLLECTION_NAME, bookingId);
   const docSnap = await getDoc(docRef);
-  
+
   if (!docSnap.exists()) return null;
-  
+
   return {
     id: docSnap.id,
     ...docSnap.data(),
@@ -75,31 +92,31 @@ export async function getUserBookings(userId: string): Promise<Booking[]> {
     where('requesterId', '==', userId),
     orderBy('createdAt', 'desc')
   );
-  
+
   // Query for bookings where user is provider
   const providerQuery = query(
     collection(db, COLLECTION_NAME),
     where('providerId', '==', userId),
     orderBy('createdAt', 'desc')
   );
-  
+
   const [requesterSnapshot, providerSnapshot] = await Promise.all([
     getDocs(requesterQuery),
     getDocs(providerQuery),
   ]);
-  
+
   const requesterBookings = requesterSnapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
     isRequester: true,
   })) as (Booking & { isRequester: boolean })[];
-  
+
   const providerBookings = providerSnapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
     isRequester: false,
   })) as (Booking & { isRequester: boolean })[];
-  
+
   // Combine and sort by createdAt
   const allBookings = [...requesterBookings, ...providerBookings];
   allBookings.sort((a, b) => {
@@ -107,7 +124,7 @@ export async function getUserBookings(userId: string): Promise<Booking[]> {
     const bTime = b.createdAt?.toMillis?.() || 0;
     return bTime - aTime;
   });
-  
+
   return allBookings;
 }
 
@@ -169,9 +186,9 @@ export async function getPendingBookings(providerId: string): Promise<Booking[]>
     where('status', '==', 'pending'),
     orderBy('createdAt', 'desc')
   );
-  
+
   const querySnapshot = await getDocs(q);
-  
+
   return querySnapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
