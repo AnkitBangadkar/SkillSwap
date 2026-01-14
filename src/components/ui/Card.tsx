@@ -11,8 +11,8 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', padding = 'md', hover = false, ...props }, ref) => {
     const variants = {
       default: 'card-base',
-      bordered: 'card-base border-2',
-      elevated: 'card-base shadow-lg dark:shadow-black/50',
+      bordered: 'card-base',
+      elevated: 'card-base',
     };
 
     const paddings = {
@@ -26,7 +26,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          'rounded-2xl',
+          'rounded-xl',
           variants[variant],
           paddings[padding],
           hover && 'card-hover cursor-pointer',

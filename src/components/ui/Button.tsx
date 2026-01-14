@@ -28,19 +28,19 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles = 
-      'inline-flex items-center justify-center font-medium rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary-500)] disabled:opacity-50 disabled:pointer-events-none';
+      'inline-flex items-center justify-center font-bold rounded-lg transition-all active:scale-[0.98] focus:outline-none disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100 uppercase tracking-wide';
 
     const variants = {
       primary:
-        'btn-primary shadow-sm hover:shadow-md',
+        'btn-primary',
       secondary:
-        'bg-[var(--bg-surface-highlight)] text-[var(--text-primary)] hover:bg-[var(--border-default)]',
+        'bg-[var(--bg-surface)] text-[var(--text-primary)] border-2 border-[var(--border-default)] hover:bg-[var(--bg-surface-highlight)]',
       outline:
         'btn-outline',
       ghost:
-        'bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-surface-highlight)] hover:text-[var(--text-primary)]',
+        'bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-surface-highlight)] hover:text-[var(--text-primary)] hover:underline decoration-2 underline-offset-4',
       danger:
-        'bg-[var(--color-error)] text-white hover:opacity-90',
+        'bg-[var(--color-error)] text-white hover:opacity-90 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]',
     };
 
     const sizes = {
