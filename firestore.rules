@@ -78,8 +78,9 @@ service cloud.firestore {
     // ==========================================
     match /chats/{chatId} {
       // Only participants can read the chat
+      // Allow reading non-existent docs to support creation check (getDoc)
       allow read: if isAuthenticated() 
-        && isParticipant(resource.data.participants);
+        && (resource == null || isParticipant(resource.data.participants));
       
       // Authenticated users can create chats (if they're a participant)
       allow create: if isAuthenticated() 
