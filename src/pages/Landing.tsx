@@ -52,7 +52,7 @@ export default function Landing() {
           
           <Link to={isAuthenticated ? ROUTES.dashboard : ROUTES.login}>
             <Button>
-              {isAuthenticated ? 'Go to Dashboard' : 'Get Started'}
+              {isAuthenticated ? 'GO TO DASHBOARD' : 'GET STARTED'}
             </Button>
           </Link>
         </div>

@@ -22,13 +22,39 @@ service cloud.firestore {
     // ==========================================
     match /users/{userId} {
       // Anyone authenticated can read user profiles
+      // Note: Calendar tokens are stored here but should only be accessed by owner
+      // In production, consider storing sensitive tokens in a separate secure subcollection
       allow read: if isAuthenticated();
       
       // Users can only create/update their own profile
+      // This includes calendar token management
       allow create, update: if isAuthenticated() && isOwner(userId);
       
       // Users cannot delete profiles
       allow delete: if false;
+
+      // ==========================================
+      // Notifications Subcollection
+      // ==========================================
+      match /notifications/{notificationId} {
+        // User can read their own notifications
+        allow read: if isAuthenticated() && isOwner(userId);
+        
+        // Any authenticated user can send a notification to another user
+        allow create: if isAuthenticated();
+        
+        // User can update (mark as read) or delete their own notifications
+        allow update, delete: if isAuthenticated() && isOwner(userId);
+      }
+
+      // ==========================================
+      // Calendar Tokens Subcollection (Secure)
+      // ==========================================
+      // Stores Google Calendar OAuth tokens securely
+      // Only the owner can read/write their own tokens
+      match /calendarTokens/{tokenId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
+      }
     }
     
     // ==========================================

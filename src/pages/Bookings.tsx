@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, MapPin, User, MessageCircle, Check, X, Loader2 } from 'lucide-react';
-import { Card, Button, Badge, Avatar, EmptyState } from '../components/ui';
+import { Calendar, Clock, MapPin, User, MessageCircle, Check, X, Loader2, Video, CalendarCheck, CalendarPlus } from 'lucide-react';
+import { Card, Button, Badge, EmptyState } from '../components/ui';
 import { ROUTES, BOOKING_STATUS_LABELS, DURATION_OPTIONS } from '../lib/constants';
-import { getUserBookings, confirmBooking, declineBooking, cancelBooking } from '../services/bookings';
+import { getUserBookings, confirmBooking, declineBooking, cancelBooking, syncBookingToCalendar } from '../services/bookings';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import type { Booking, BookingStatus } from '../types';
@@ -42,8 +42,19 @@ export default function Bookings() {
   const handleConfirm = async (bookingId: string) => {
     setProcessingId(bookingId);
     try {
-      await confirmBooking(bookingId);
-      showToast({ type: 'success', message: 'Session confirmed!' });
+      const result = await confirmBooking(bookingId);
+      
+      if (result.calendarEventsCreated) {
+        showToast({ 
+          type: 'success', 
+          message: result.meetLink 
+            ? 'Session confirmed and added to calendar with Meet link!' 
+            : 'Session confirmed and added to calendar!' 
+        });
+      } else {
+        showToast({ type: 'success', message: 'Session confirmed!' });
+      }
+      
       fetchBookings();
     } catch (error) {
       console.error('Failed to confirm booking:', error);
@@ -76,6 +87,34 @@ export default function Bookings() {
     } catch (error) {
       console.error('Failed to cancel booking:', error);
       showToast({ type: 'error', message: 'Failed to cancel session' });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleSyncCalendar = async (bookingId: string) => {
+    if (!user) return;
+    setProcessingId(bookingId);
+    try {
+      const result = await syncBookingToCalendar(bookingId, user.id);
+      
+      if (result.success) {
+        showToast({ 
+          type: 'success', 
+          message: result.meetLink 
+            ? 'Synced to calendar with Meet link!' 
+            : 'Synced to calendar!' 
+        });
+        fetchBookings();
+      } else {
+        showToast({ 
+          type: 'error', 
+          message: result.error || 'Failed to sync to calendar' 
+        });
+      }
+    } catch (error) {
+      console.error('Failed to sync booking:', error);
+      showToast({ type: 'error', message: 'Failed to sync to calendar' });
     } finally {
       setProcessingId(null);
     }
@@ -230,6 +269,30 @@ export default function Bookings() {
                   )}
                 </div>
 
+                {/* Meet Link */}
+                {booking.meetLink && booking.status === 'confirmed' && (
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <Video className="h-5 w-5 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Google Meet ready</span>
+                    <a
+                      href={booking.meetLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-auto text-sm font-bold text-blue-600 hover:text-blue-700 underline"
+                    >
+                      Join Meeting
+                    </a>
+                  </div>
+                )}
+
+                {/* Calendar Sync Indicator */}
+                {(booking.requesterCalendarEventId || booking.providerCalendarEventId) && booking.status === 'confirmed' && (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CalendarCheck className="h-4 w-4" />
+                    <span>Added to calendar</span>
+                  </div>
+                )}
+
                 {/* Notes */}
                 {booking.notes && (
                   <p className="text-sm text-[var(--text-secondary)] italic">"{booking.notes}"</p>
@@ -273,6 +336,22 @@ export default function Bookings() {
 
                   {booking.status === 'confirmed' && (
                     <>
+                      {/* Retroactive Calendar Sync */}
+                      {user && (
+                        (user.id === booking.requesterId && !booking.requesterCalendarEventId) || 
+                        (user.id === booking.providerId && !booking.providerCalendarEventId)
+                      ) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSyncCalendar(booking.id)}
+                          disabled={isProcessing}
+                          leftIcon={isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarPlus className="h-4 w-4" />}
+                        >
+                          Add to Calendar
+                        </Button>
+                      )}
+
                       <Button
                         size="sm"
                         variant="outline"

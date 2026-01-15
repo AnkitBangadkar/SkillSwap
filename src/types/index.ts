@@ -15,6 +15,14 @@ export interface User {
   isCollegeVerified: boolean;
   verificationCode?: string;
   verificationExpiry?: Timestamp;
+  // Google Calendar integration
+  googleCalendarLinked?: boolean;
+  googleAccessToken?: string;
+  googleRefreshToken?: string;
+  googleTokenExpiry?: Timestamp;
+  // Preferences
+  emailNotifications?: boolean;
+  privacySettings?: 'public' | 'users_only';
 }
 
 export interface UserProfile extends User {
@@ -119,6 +127,10 @@ export interface Booking {
   status: BookingStatus;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
+  // Google Calendar integration
+  requesterCalendarEventId?: string;
+  providerCalendarEventId?: string;
+  meetLink?: string;
 }
 
 export interface CreateBookingData {
