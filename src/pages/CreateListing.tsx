@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, Wand2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -16,7 +16,7 @@ import type { CreateListingData, ListingMode } from '../types';
 import { useUIStore } from '../stores/uiStore';
 import { useAuthStore } from '../stores/authStore';
 import { createListing, getListing, updateListing } from '../services/listings';
-import { generateTagSuggestions } from '../services/gemini';
+import { generateTagSuggestions, enhanceListingDescription } from '../services/gemini';
 
 export default function CreateListing() {
   const navigate = useNavigate();
@@ -27,6 +27,7 @@ export default function CreateListing() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [isGettingSuggestions, setIsGettingSuggestions] = useState(false);
+  const [isEnhancingDescription, setIsEnhancingDescription] = useState(false);
   const [formData, setFormData] = useState<CreateListingData>({
     title: '',
     description: '',
@@ -194,6 +195,59 @@ export default function CreateListing() {
     }
   };
 
+  const handleEnhanceDescription = async () => {
+    if (!formData.title || !formData.description) {
+      showToast({
+        type: 'warning',
+        message: 'Add a title and description first to enhance with AI',
+      });
+      return;
+    }
+
+    if (formData.description.length < 10) {
+      showToast({
+        type: 'warning',
+        message: 'Add at least a few words to your description first',
+      });
+      return;
+    }
+
+    setIsEnhancingDescription(true);
+
+    try {
+      const enhanced = await enhanceListingDescription(
+        formData.title,
+        formData.type,
+        formData.tags,
+        formData.description
+      );
+
+      if (enhanced) {
+        setFormData((prev) => ({
+          ...prev,
+          description: enhanced,
+        }));
+
+        showToast({
+          type: 'success',
+          message: 'Description enhanced with AI!',
+        });
+      } else {
+        showToast({
+          type: 'info',
+          message: 'AI enhancement unavailable. Your description looks good!',
+        });
+      }
+    } catch {
+      showToast({
+        type: 'error',
+        message: 'Failed to enhance description. Try again.',
+      });
+    } finally {
+      setIsEnhancingDescription(false);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
@@ -271,19 +325,39 @@ export default function CreateListing() {
             />
 
             {/* Description */}
-            <Textarea
-              label="Description"
-              placeholder={
-                formData.type === 'offer'
-                  ? 'Describe what you can teach, your experience level, and what learners can expect...'
-                  : 'Describe what you want to learn, your current level, and what kind of help you need...'
-              }
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              error={errors.description}
-              hint={`${formData.description.length}/${APP_CONFIG.maxDescriptionLength}`}
-              rows={4}
-            />
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-[var(--text-secondary)]">
+                  Description
+                </label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleEnhanceDescription}
+                  disabled={isEnhancingDescription}
+                >
+                  {isEnhancingDescription ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : (
+                    <Wand2 className="h-4 w-4 mr-1" />
+                  )}
+                  AI Enhance
+                </Button>
+              </div>
+              <Textarea
+                placeholder={
+                  formData.type === 'offer'
+                    ? 'Describe what you can teach, your experience level, and what learners can expect...'
+                    : 'Describe what you want to learn, your current level, and what kind of help you need...'
+                }
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                error={errors.description}
+                hint={`${formData.description.length}/${APP_CONFIG.maxDescriptionLength}`}
+                rows={4}
+              />
+            </div>
 
             {/* Tags with AI Suggestion */}
             <div>

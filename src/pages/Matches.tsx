@@ -5,10 +5,12 @@ import { Card, Button, EmptyState, Avatar, Badge } from '../components/ui';
 import { StaggerContainer, StaggerItem, FadeIn } from '../components/ui/Motion';
 import { ROUTES } from '../lib/constants';
 import { getMatchesForUser } from '../services/matching';
+import { getUserListings } from '../services/listings';
+import { generateMatchExplanation } from '../services/gemini';
 import { createChat } from '../services/chat';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
-import type { Match } from '../types';
+import type { Match, Listing } from '../types';
 
 export default function Matches() {
   const navigate = useNavigate();
@@ -16,16 +18,23 @@ export default function Matches() {
   const { showToast } = useUIStore();
   
   const [matches, setMatches] = useState<Match[]>([]);
+  const [userListings, setUserListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingExplanations, setLoadingExplanations] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    async function fetchMatches() {
+    async function fetchMatchesAndListings() {
       if (!user) return;
       
       setIsLoading(true);
       try {
-        const result = await getMatchesForUser(user.id);
-        setMatches(result);
+        // Fetch matches and user's own listings in parallel
+        const [matchResults, userListingResults] = await Promise.all([
+          getMatchesForUser(user.id),
+          getUserListings(user.id),
+        ]);
+        setMatches(matchResults);
+        setUserListings(userListingResults);
       } catch (error) {
         console.error('Failed to fetch matches:', error);
       } finally {
@@ -33,8 +42,71 @@ export default function Matches() {
       }
     }
 
-    fetchMatches();
+    fetchMatchesAndListings();
   }, [user]);
+
+  // Find the best matching user listing for a given match
+  const findBestUserListing = (matchListing: Listing): Listing | null => {
+    // Find a user listing of opposite type that shares tags with the match
+    const oppositeType = matchListing.type === 'offer' ? 'request' : 'offer';
+    const matchTags = new Set(matchListing.tags.map(t => t.toLowerCase()));
+    
+    const relevantListings = userListings.filter(ul => ul.type === oppositeType);
+    
+    if (relevantListings.length === 0) return null;
+    
+    // Find the one with most overlapping tags
+    let bestListing = relevantListings[0];
+    let bestScore = 0;
+    
+    for (const listing of relevantListings) {
+      const score = listing.tags.filter(t => matchTags.has(t.toLowerCase())).length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestListing = listing;
+      }
+    }
+    
+    return bestListing;
+  };
+
+  // Generate AI explanation for a specific match
+  const generateExplanationForMatch = async (match: Match) => {
+    if (match.explanation || !user) return;
+
+    // Mark as loading
+    setLoadingExplanations(prev => new Set(prev).add(match.listing.id));
+
+    try {
+      // Find the user's listing that matches with this one
+      const userListing = findBestUserListing(match.listing);
+      
+      if (!userListing) {
+        console.warn('No matching user listing found for explanation');
+        return;
+      }
+
+      const explanation = await generateMatchExplanation(match.listing, userListing);
+
+      if (explanation) {
+        setMatches(prevMatches =>
+          prevMatches.map(m =>
+            m.listing.id === match.listing.id
+              ? { ...m, explanation }
+              : m
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Failed to generate explanation:', error);
+    } finally {
+      setLoadingExplanations(prev => {
+        const next = new Set(prev);
+        next.delete(match.listing.id);
+        return next;
+      });
+    }
+  };
 
   const handleConnect = async (match: Match) => {
     if (!user) return;
@@ -105,59 +177,100 @@ export default function Matches() {
         </div>
       ) : matches.length > 0 ? (
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-4" delay={0.2}>
-          {matches.map(({ listing, matchScore }) => (
-            <StaggerItem key={listing.id}>
-              <Card hover padding="md" className="flex flex-col h-full border-2 border-[var(--border-default)]">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar name={listing.userName} src={listing.userPhoto} size="md" />
-                    <div>
-                      <p className="font-bold text-[var(--text-primary)]">{listing.userName}</p>
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={listing.type === 'offer' ? 'success' : 'primary'}
-                          size="sm"
-                        >
-                          {listing.type === 'offer' ? 'Offers' : 'Needs'}
-                        </Badge>
-                        <span className="text-xs text-[var(--text-tertiary)]">{listing.availability}</span>
+          {matches.map((match) => {
+            const { listing, matchScore, explanation } = match;
+            const isLoadingExplanation = loadingExplanations.has(listing.id);
+
+            return (
+              <StaggerItem key={listing.id}>
+                <Card hover padding="md" className="flex flex-col h-full border-2 border-[var(--border-default)]">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={listing.userName} src={listing.userPhoto} size="md" />
+                      <div>
+                        <p className="font-bold text-[var(--text-primary)]">{listing.userName}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={listing.type === 'offer' ? 'success' : 'primary'}
+                            size="sm"
+                          >
+                            {listing.type === 'offer' ? 'Offers' : 'Needs'}
+                          </Badge>
+                          <span className="text-xs text-[var(--text-tertiary)]">{listing.availability}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <div className="radial-progress text-[var(--color-primary-600)] font-bold text-sm" style={{ "--value": Math.min(matchScore * 20, 100), "--size": "2.5rem" } as any}>
-                      {Math.round(matchScore * 10)}%
+                    <div className="flex flex-col items-end">
+                      <div className="radial-progress text-[var(--color-primary-600)] font-bold text-sm" style={{ "--value": Math.min(matchScore * 20, 100), "--size": "2.5rem" } as any}>
+                        {Math.round(matchScore * 10)}%
+                      </div>
+                      <span className="text-[10px] uppercase font-bold text-[var(--text-tertiary)] mt-1">Match</span>
                     </div>
-                    <span className="text-[10px] uppercase font-bold text-[var(--text-tertiary)] mt-1">Match</span>
                   </div>
-                </div>
 
-                <h3 className="font-display font-bold text-lg text-[var(--text-primary)] mb-2">{listing.title}</h3>
-                <p className="text-sm text-[var(--text-secondary)] line-clamp-2 mb-4 flex-1">
-                  {listing.description}
-                </p>
+                  <h3 className="font-display font-bold text-lg text-[var(--text-primary)] mb-2">{listing.title}</h3>
+                  <p className="text-sm text-[var(--text-secondary)] line-clamp-2 mb-4 flex-1">
+                    {listing.description}
+                  </p>
 
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {listing.tags.slice(0, 3).map((tag) => (
-                    <Badge key={tag} variant="outline" size="sm">
-                      {tag}
-                    </Badge>
-                  ))}
-                  {listing.tags.length > 3 && (
-                    <span className="text-xs text-[var(--text-tertiary)] flex items-center">+{listing.tags.length - 3} more</span>
+                  {/* AI Insight */}
+                  {matchScore >= 5 && (
+                    <div className="mb-4">
+                      <div className="bg-[var(--color-primary-50)] border border-[var(--color-primary-200)] rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <Sparkles className="h-4 w-4 text-[var(--color-primary-600)] flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            {explanation ? (
+                              <p className="text-sm text-[var(--color-primary-900)]">
+                                {explanation}
+                              </p>
+                            ) : (
+                              <button
+                                onClick={() => generateExplanationForMatch(match)}
+                                disabled={isLoadingExplanation}
+                                className="text-sm font-medium text-[var(--color-primary-700)] hover:text-[var(--color-primary-900)] disabled:opacity-50 flex items-center gap-1"
+                              >
+                                {isLoadingExplanation ? (
+                                  <>
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    Generating insight...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="h-3 w-3" />
+                                    See why you match
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </div>
 
-                <Button
-                  className="w-full mt-auto"
-                  onClick={() => handleConnect({ listing, matchScore })}
-                  leftIcon={<MessageCircle className="h-4 w-4" />}
-                >
-                  Connect
-                </Button>
-              </Card>
-            </StaggerItem>
-          ))}
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {listing.tags.slice(0, 3).map((tag) => (
+                      <Badge key={tag} variant="outline" size="sm">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {listing.tags.length > 3 && (
+                      <span className="text-xs text-[var(--text-tertiary)] flex items-center">+{listing.tags.length - 3} more</span>
+                    )}
+                  </div>
+
+                  <Button
+                    className="w-full mt-auto"
+                    onClick={() => handleConnect(match)}
+                    leftIcon={<MessageCircle className="h-4 w-4" />}
+                  >
+                    Connect
+                  </Button>
+                </Card>
+              </StaggerItem>
+            );
+          })}
         </StaggerContainer>
       ) : (
         <FadeIn delay={0.2}>

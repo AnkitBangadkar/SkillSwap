@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Send, Loader2, MessageCircle, Calendar, X, Clock, MapPin } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, MessageCircle, Calendar, MapPin, Sparkles } from 'lucide-react';
 import { Card, Button, Avatar, EmptyState, Modal, Input, Select, Textarea, DatePicker, TimeInput } from '../components/ui';
 import { ROUTES, DURATION_OPTIONS } from '../lib/constants';
 import { getChat, subscribeToMessages, sendMessage, markChatAsRead } from '../services/chat';
+import { getListing } from '../services/listings';
+import { generateConversationStarters } from '../services/gemini';
 import { createBooking } from '../services/bookings';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
-import { FadeIn, SlideUp } from '../components/ui/Motion';
 import type { Chat, Message } from '../types';
 
 export default function ChatRoom() {
@@ -21,6 +22,10 @@ export default function ChatRoom() {
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  
+  // Conversation starters
+  const [conversationStarters, setConversationStarters] = useState<string[]>([]);
+  const [isLoadingStarters, setIsLoadingStarters] = useState(false);
 
   // Booking modal state
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -89,6 +94,29 @@ export default function ChatRoom() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [chatId, user]);
+
+  // Load conversation starters when chat is empty
+  useEffect(() => {
+    async function loadConversationStarters() {
+      if (!chat || messages.length > 0 || conversationStarters.length > 0) return;
+
+      setIsLoadingStarters(true);
+      try {
+        // Fetch the listing to get full details
+        const listing = await getListing(chat.listingId);
+        if (listing) {
+          const starters = await generateConversationStarters(listing);
+          setConversationStarters(starters);
+        }
+      } catch (error) {
+        console.error('Failed to generate conversation starters:', error);
+      } finally {
+        setIsLoadingStarters(false);
+      }
+    }
+
+    loadConversationStarters();
+  }, [chat, messages.length, conversationStarters.length]);
 
   const getOtherParticipant = () => {
     if (!chat || !user) return null;
@@ -240,10 +268,40 @@ export default function ChatRoom() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4">
         {messages.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            <MessageCircle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-            <p className="font-medium">No messages yet</p>
-            <p className="text-sm">Send a message to start the conversation!</p>
+          <div className="text-center text-gray-500 py-8 space-y-6">
+            <div>
+              <MessageCircle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p className="font-medium">No messages yet</p>
+              <p className="text-sm">Send a message to start the conversation!</p>
+            </div>
+
+            {/* AI Conversation Starters */}
+            {conversationStarters.length > 0 && (
+              <div className="max-w-md mx-auto">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <Sparkles className="h-4 w-4 text-indigo-600" />
+                  <p className="text-sm font-medium text-gray-700">AI Suggested Starters</p>
+                </div>
+                <div className="space-y-2">
+                  {conversationStarters.map((starter, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setNewMessage(starter)}
+                      className="w-full text-left px-4 py-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl text-sm text-gray-700 transition-colors"
+                    >
+                      {starter}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isLoadingStarters && (
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Generating conversation starters...</span>
+              </div>
+            )}
           </div>
         ) : (
           messages.map((message) => {
