@@ -13,7 +13,6 @@ import {
   onSnapshot,
   updateDoc,
   increment,
-  documentId,
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -42,21 +41,15 @@ export async function createChat(
   const sortedParticipants = [user1Id, user2Id].sort();
   const chatId = `${listingId}_${sortedParticipants[0]}_${sortedParticipants[1]}`;
 
-  // Use query to check existence to avoid permission errors with getDoc on non-existent docs
-  // MUST include participant check to satisfy security rules ("rules are not filters")
-  const q = query(
-    collection(db, CHATS_COLLECTION),
-    where(documentId(), '==', chatId),
-    where('participants', 'array-contains', user1Id)
-  );
+  const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
+  
+  // Use getDoc to check if chat already exists
+  // Security rule allows get when resource == null (doc doesn't exist) OR user is participant
+  const existingChat = await getDoc(chatDocRef);
 
-  const snapshot = await getDocs(q);
-
-  if (!snapshot.empty) {
+  if (existingChat.exists()) {
     return chatId;
   }
-
-  const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
 
   // Create new chat document
   await setDoc(chatDocRef, {
