@@ -44,14 +44,14 @@ export function Modal({
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
           className={cn(
-            'bg-[var(--bg-surface)] rounded-2xl shadow-2xl w-full animate-in zoom-in-95 duration-200 border border-[var(--border-default)]',
+            'bg-[var(--bg-surface)] rounded-2xl shadow-2xl w-full animate-in zoom-in-95 duration-200 border border-[var(--border-default)] max-h-[90vh] flex flex-col',
             sizes[size]
           )}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           {(title || showClose) && (
-            <div className="flex items-start justify-between p-5 border-b border-[var(--border-default)]">
+            <div className="flex items-start justify-between p-5 border-b border-[var(--border-default)] flex-shrink-0">
               <div>
                 {title && (
                   <h2 className="text-xl font-display font-semibold text-[var(--text-primary)]">{title}</h2>
@@ -74,7 +74,7 @@ export function Modal({
           )}
 
           {/* Content */}
-          <div className="p-4">{children}</div>
+          <div className="p-4 overflow-y-auto flex-1">{children}</div>
         </div>
       </div>
     </Fragment>,

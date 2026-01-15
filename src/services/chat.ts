@@ -13,6 +13,7 @@ import {
   onSnapshot,
   updateDoc,
   increment,
+  documentId,
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -40,14 +41,23 @@ export async function createChat(
   // Format: listingId_participant1_participant2 (participants sorted alphabetically)
   const sortedParticipants = [user1Id, user2Id].sort();
   const chatId = `${listingId}_${sortedParticipants[0]}_${sortedParticipants[1]}`;
-  
-  const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
-  const chatDocSnap = await getDoc(chatDocRef);
-  
-  if (chatDocSnap.exists()) {
+
+  // Use query to check existence to avoid permission errors with getDoc on non-existent docs
+  // MUST include participant check to satisfy security rules ("rules are not filters")
+  const q = query(
+    collection(db, CHATS_COLLECTION),
+    where(documentId(), '==', chatId),
+    where('participants', 'array-contains', user1Id)
+  );
+
+  const snapshot = await getDocs(q);
+
+  if (!snapshot.empty) {
     return chatId;
   }
-  
+
+  const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
+
   // Create new chat document
   await setDoc(chatDocRef, {
     participants: [user1Id, user2Id],
@@ -75,7 +85,7 @@ export async function createChat(
     `${user1Name} wants to connect regarding "${listingTitle}"`,
     `/chats/${chatId}`
   );
-  
+
   return chatId;
 }
 
@@ -101,9 +111,9 @@ export async function getUserChats(userId: string): Promise<Chat[]> {
     where('participants', 'array-contains', userId),
     orderBy('lastMessageAt', 'desc')
   );
-  
+
   const querySnapshot = await getDocs(q);
-  
+
   return querySnapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
@@ -117,9 +127,9 @@ export async function getUserChats(userId: string): Promise<Chat[]> {
 export async function getChat(chatId: string): Promise<Chat | null> {
   const docRef = doc(db, CHATS_COLLECTION, chatId);
   const docSnap = await getDoc(docRef);
-  
+
   if (!docSnap.exists()) return null;
-  
+
   return {
     id: docSnap.id,
     ...docSnap.data(),
@@ -141,15 +151,15 @@ export async function sendMessage(
     text,
     createdAt: serverTimestamp(),
   });
-  
+
   // Update chat with last message info
   const chatRef = doc(db, CHATS_COLLECTION, chatId);
   const chatSnap = await getDoc(chatRef);
-  
+
   if (chatSnap.exists()) {
     const chatData = chatSnap.data();
     const otherUserId = chatData.participants.find((id: string) => id !== userId);
-    
+
     await updateDoc(chatRef, {
       lastMessage: text,
       lastMessageAt: serverTimestamp(),
@@ -167,7 +177,7 @@ export async function sendMessage(
       `/chats/${chatId}`
     );
   }
-  
+
   return messageDoc.id;
 }
 
@@ -184,9 +194,9 @@ export async function getMessages(
     orderBy('createdAt', 'desc'),
     limit(messageLimit)
   );
-  
+
   const querySnapshot = await getDocs(q);
-  
+
   return querySnapshot.docs
     .map((doc) => ({
       id: doc.id,
@@ -208,14 +218,14 @@ export function subscribeToMessages(
     collection(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION),
     orderBy('createdAt', 'asc')
   );
-  
+
   return onSnapshot(q, (snapshot) => {
     const messages = snapshot.docs.map((doc) => ({
       id: doc.id,
       chatId,
       ...doc.data(),
     })) as Message[];
-    
+
     callback(messages);
   });
 }
@@ -247,13 +257,13 @@ export function subscribeToChats(
     where('participants', 'array-contains', userId),
     orderBy('lastMessageAt', 'desc')
   );
-  
+
   return onSnapshot(q, (snapshot) => {
     const chats = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as Chat[];
-    
+
     callback(chats);
   });
 }

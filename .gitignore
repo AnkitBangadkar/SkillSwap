@@ -41,3 +41,8 @@ desktop.ini
 temp/
 temp (exclude from git)/
 opencode.json
+
+# Screenshots and images
+*.png
+*.jpeg
+*.jpg

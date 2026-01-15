@@ -1,19 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PlusCircle, Compass, Sparkles, MessageCircle, Calendar, TrendingUp, Loader2 } from 'lucide-react';
-import { Card, Button, Badge, Avatar, EmptyState } from '../components/ui';
+import { PlusCircle, Compass, Sparkles, MessageCircle, Calendar, TrendingUp, Loader2, Trash2 } from 'lucide-react';
+import { Card, Button, Badge, Avatar, EmptyState, Modal } from '../components/ui';
 import { StaggerContainer, StaggerItem, FadeIn, SlideUp } from '../components/ui/Motion';
 import { useAuthStore } from '../stores/authStore';
+import { useUIStore } from '../stores/uiStore';
 import { ROUTES } from '../lib/constants';
-import { getUserListings } from '../services/listings';
+import { getUserListings, deleteListing } from '../services/listings';
 import type { Listing } from '../types';
 
 export default function Dashboard() {
   const { user } = useAuthStore();
+  const { showToast } = useUIStore();
   const navigate = useNavigate();
 
   const [userListings, setUserListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [listingToDelete, setListingToDelete] = useState<Listing | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch user's listings from Firestore
   useEffect(() => {
@@ -33,6 +37,30 @@ export default function Dashboard() {
 
     fetchData();
   }, [user]);
+
+  // Handle delete listing
+  const handleDeleteListing = async () => {
+    if (!listingToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteListing(listingToDelete.id);
+      setUserListings(prev => prev.filter(l => l.id !== listingToDelete.id));
+      showToast({
+        type: 'success',
+        message: 'Listing deleted successfully',
+      });
+    } catch (error) {
+      console.error('Failed to delete listing:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to delete listing. Please try again.',
+      });
+    } finally {
+      setIsDeleting(false);
+      setListingToDelete(null);
+    }
+  };
 
   // Calculate stats from real data
   const quickStats = [
@@ -124,6 +152,14 @@ export default function Dashboard() {
                           ))}
                         </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => setListingToDelete(listing)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </Card>
                 </StaggerItem>
@@ -212,6 +248,38 @@ export default function Dashboard() {
           </Link>
         </StaggerItem>
       </StaggerContainer>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!listingToDelete}
+        onClose={() => setListingToDelete(null)}
+        title="Delete Listing"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-[var(--text-secondary)]">
+            Are you sure you want to delete "<span className="font-medium text-[var(--text-primary)]">{listingToDelete?.title}</span>"? This action cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setListingToDelete(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              className="flex-1 bg-red-600 hover:bg-red-700"
+              onClick={handleDeleteListing}
+              isLoading={isDeleting}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

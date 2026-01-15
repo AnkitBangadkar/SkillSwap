@@ -318,7 +318,7 @@ export default function Explore() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3 pt-4 border-t">
+            <div className="flex gap-3 pt-4 border-t sticky bottom-0 bg-[var(--bg-surface)] pb-1">
               <Button
                 variant="outline"
                 className="flex-1"
