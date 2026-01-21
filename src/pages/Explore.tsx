@@ -71,19 +71,58 @@ export default function Explore() {
     setSelectedTags([]);
   };
 
-  const handleConnect = async (listing: Listing) => {
-    if (!user) return;
+const handleConnect = async (listing: Listing) => {
+    if (!user) {
+      showToast({
+        type: 'error',
+        message: 'Please sign in to connect with others.',
+      });
+      return;
+    }
+
+    // Debug log the listing data
+    console.log('Full listing object:', listing);
+    console.log('Current user:', user);
+
+    // Validate required fields
+    if (!listing.id || !listing.title || !listing.userId || !listing.userName) {
+      console.error('Missing required fields:', {
+        hasId: !!listing.id,
+        hasTitle: !!listing.title,
+        hasUserId: !!listing.userId,
+        hasUserName: !!listing.userName,
+        listing: listing
+      });
+      showToast({
+        type: 'error',
+        message: 'Invalid listing data. Please try again.',
+      });
+      return;
+    }
 
     try {
+      const chatData = {
+        listingId: listing.id,
+        listingTitle: listing.title,
+        user1Id: user.id,
+        user1Name: user.name || 'Anonymous',
+        user1Photo: user.photoURL || '',
+        user2Id: listing.userId,
+        user2Name: listing.userName,
+        user2Photo: listing.userPhoto || ''
+      };
+
+      console.log('Creating chat with data:', chatData);
+
       const chatId = await createChat(
-        listing.id,
-        listing.title,
-        user.id,
-        user.name,
-        user.photoURL,
-        listing.userId,
-        listing.userName,
-        listing.userPhoto
+        chatData.listingId,
+        chatData.listingTitle,
+        chatData.user1Id,
+        chatData.user1Name,
+        chatData.user1Photo,
+        chatData.user2Id,
+        chatData.user2Name,
+        chatData.user2Photo
       );
 
       showToast({
@@ -97,7 +136,7 @@ export default function Explore() {
       console.error('Failed to connect:', error);
       showToast({
         type: 'error',
-        message: 'Failed to start conversation. Please try again.',
+        message: error instanceof Error ? error.message : 'Failed to start conversation. Please try again.',
       });
     }
   };

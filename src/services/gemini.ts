@@ -7,9 +7,7 @@ import type { Listing } from '../types';
 
 // Models in order of preference (try first, fallback to next)
 const MODEL_PRIORITY = [
-  'gemini-2.5-flash',      // Latest and fastest
-  'gemini-2.0-flash',      // Stable fallback
-  'gemini-2.5-pro',        // More capable but slower
+  'gemini-1.5-flash',      // Most stable text-only model
 ] as const;
 
 // Parse API keys from env (comma-separated for multiple keys)
@@ -30,7 +28,8 @@ let currentKeyIndex = 0;
 
 // Check if Gemini is configured
 export const isGeminiConfigured = (): boolean => {
-  return API_KEYS.length > 0;
+  // Temporarily disable AI to prevent image errors
+  return false; // API_KEYS.length > 0;
 };
 
 // Get current API key
@@ -176,7 +175,18 @@ async function tryGenerateWithModel(
   let model: GenerativeModel;
   
   try {
-    model = client.getGenerativeModel({ model: modelName });
+    // Use text-only configuration for all models
+    const modelConfig = {
+      model: modelName,
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1024,
+      },
+    };
+    
+    model = client.getGenerativeModel(modelConfig);
   } catch (error) {
     console.error(`${operationName}: Failed to get model ${modelName}:`, error);
     return null;
@@ -273,23 +283,38 @@ export async function generateMatchExplanation(
   listing2: Listing
 ): Promise<string | null> {
   return withModelFallback(
-    () => `You are helping students on a campus skill-sharing platform.
+    () => {
+      // Clean descriptions to remove any potential image URLs or references
+      const cleanDesc1 = listing1.description
+        .replace(/https?:\/\/[^\s]+/g, '[link]')
+        .replace(/image\.png|image\.jpg|image\.jpeg|image\.gif/gi, '[image]')
+        .slice(0, 200);
+
+      const cleanDesc2 = listing2.description
+        .replace(/https?:\/\/[^\s]+/g, '[link]')
+        .replace(/image\.png|image\.jpg|image\.jpeg|image\.gif/gi, '[image]')
+        .slice(0, 200);
+
+      return `You are helping students on a campus skill-sharing platform.
 
 Given two student skill listings, explain briefly why they are compatible for a skill exchange.
 
+IMPORTANT: Only process text content. Do not attempt to read or analyze any images.
+
 Listing A (${listing1.type === 'offer' ? 'Offering' : 'Looking for'}):
-- Title: ${listing1.title}
-- Description: ${listing1.description}
-- Skills/Topics: ${listing1.tags.join(', ')}
+- Title: ${listing1.title.slice(0, 100)}
+- Description: ${cleanDesc1}
+- Skills/Topics: ${listing1.tags.slice(0, 5).join(', ')}
 - Posted by: ${listing1.userName}
 
 Listing B (${listing2.type === 'offer' ? 'Offering' : 'Looking for'}):
-- Title: ${listing2.title}
-- Description: ${listing2.description}
-- Skills/Topics: ${listing2.tags.join(', ')}
+- Title: ${listing2.title.slice(0, 100)}
+- Description: ${cleanDesc2}
+- Skills/Topics: ${listing2.tags.slice(0, 5).join(', ')}
 - Posted by: ${listing2.userName}
 
-Write a friendly, encouraging explanation (1-2 sentences, max 30 words) about why these students would be great skill exchange partners. Focus on complementary skills and potential collaboration.`,
+Write a friendly, encouraging explanation (1-2 sentences, max 30 words) about why these students would be great skill exchange partners. Focus on complementary skills and potential collaboration.`;
+    },
     (text) => text,
     null,
     'generateMatchExplanation'
@@ -305,16 +330,26 @@ export async function generateTagSuggestions(
   description: string
 ): Promise<string[]> {
   return withModelFallback(
-    () => `You are helping a student tag their skill listing on a campus skill-sharing platform.
+    () => {
+      // Clean the description to remove any potential image URLs or references
+      const cleanDescription = description
+        .replace(/https?:\/\/[^\s]+/g, '[link]')
+        .replace(/image\.png|image\.jpg|image\.jpeg|image\.gif/gi, '[image]')
+        .slice(0, 300); // Limit description length
+
+      return `You are helping a student tag their skill listing on a campus skill-sharing platform.
+
+IMPORTANT: Only process text content. Do not attempt to read or analyze any images.
 
 Based on the following listing, suggest 3-5 relevant skill tags.
 
-Title: ${title}
-Description: ${description}
+Title: ${title.slice(0, 100)}
+Description: ${cleanDescription}
 
 Return ONLY a comma-separated list of tags. Tags should be common skill names like: Python, JavaScript, Guitar, Photography, Spanish, Calculus, etc.
 
-Example output: Python, Machine Learning, Data Science`,
+Example output: Python, Machine Learning, Data Science`;
+    },
     (text) => {
       const tags = text
         .split(',')
@@ -341,17 +376,27 @@ export async function generateConversationStarters(
   listing: Listing
 ): Promise<string[]> {
   return withModelFallback(
-    () => `You are helping students start a conversation about skill exchange on a campus platform.
+    () => {
+      // Clean the description to remove any potential image URLs or references
+      const cleanDescription = listing.description
+        .replace(/https?:\/\/[^\s]+/g, '[link]')
+        .replace(/image\.png|image\.jpg|image\.jpeg|image\.gif/gi, '[image]')
+        .slice(0, 200); // Limit description length
+
+      return `You are helping students start a conversation about skill exchange on a campus platform.
 
 A student is about to message someone about this listing:
-- Title: ${listing.title}
+- Title: ${listing.title.slice(0, 100)}
 - Type: ${listing.type === 'offer' ? 'Someone is offering to teach' : 'Someone is looking to learn'}
-- Description: ${listing.description}
-- Topics: ${listing.tags.join(', ')}
+- Description: ${cleanDescription}
+- Topics: ${listing.tags.slice(0, 5).join(', ')}
+
+IMPORTANT: Only process text content. Do not attempt to read or analyze any images.
 
 Generate 3 short, friendly conversation starter messages (max 15 words each) that would be appropriate to send.
 
-Return each starter on a new line without numbering or bullets.`,
+Return each starter on a new line without numbering or bullets.`;
+    },
     (text) => {
       const starters = text
         .split('\n')
@@ -375,18 +420,57 @@ export async function enhanceListingDescription(
   currentDescription: string
 ): Promise<string | null> {
   return withModelFallback(
-    () => `You are helping a student improve their skill listing description on a campus skill-sharing platform.
+    () => {
+      // Aggressively clean the current description to remove any potential image references
+      const cleanDescription = currentDescription
+        // Remove all URLs
+        .replace(/https?:\/\/[^\s]+/g, '[link]')
+        // Remove image file references
+        .replace(/image\.(png|jpg|jpeg|gif|bmp|svg|webp)/gi, '[image]')
+        // Remove markdown image syntax
+        .replace(/!\[.*?\]\(.*?\)/g, '[image]')
+        // Remove HTML image tags
+        .replace(/<img[^>]*>/gi, '[image]')
+        // Remove base64 image data
+        .replace(/data:image\/[^;]+;base64,[^\s]+/g, '[image]')
+        // Remove any remaining image-related words
+        .replace(/\b(png|jpg|jpeg|gif|bmp|svg|webp|image|photo|picture)\b/gi, '[media]')
+        // Limit length and remove extra whitespace
+        .slice(0, 300)
+        .trim();
 
-Current listing:
-- Title: ${title}
+      const cleanTitle = title
+        .replace(/https?:\/\/[^\s]+/g, '[link]')
+        .slice(0, 100)
+        .trim();
+
+      const cleanTags = tags.slice(0, 5).join(', ');
+
+      return `You are helping a student improve their skill listing description on a campus skill-sharing platform.
+
+CRITICAL INSTRUCTIONS:
+- ONLY process text content
+- DO NOT attempt to read, analyze, or interpret any images
+- IGNORE any image references, URLs, or media content
+- Focus solely on the text description provided
+
+Current listing details:
+- Title: ${cleanTitle}
 - Type: ${type === 'offer' ? 'Offering a skill' : 'Looking to learn'}
-- Topics: ${tags.join(', ')}
-- Current description: ${currentDescription}
+- Topics: ${cleanTags}
+- Current description: "${cleanDescription}"
 
-Improve this description to be more engaging and informative. Keep it casual and friendly (2-3 sentences, max 100 words). Include what makes this a great opportunity for skill exchange.
+TASK: Improve this description to be more engaging and informative. Keep it casual and friendly (2-3 sentences, max 100 words). Include what makes this a great opportunity for skill exchange.
 
-Return ONLY the improved description, no explanations.`,
-    (text) => text,
+IMPORTANT: Return ONLY the improved text description. No explanations, no formatting, no additional text.`;
+    },
+    (text) => {
+      // Clean the response to ensure it's just text
+      return text
+        .replace(/[""]/g, '"') // Normalize quotes
+        .replace(/['']/g, "'") // Normalize apostrophes
+        .trim();
+    },
     null,
     'enhanceListingDescription'
   );

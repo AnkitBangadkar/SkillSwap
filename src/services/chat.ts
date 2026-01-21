@@ -13,7 +13,6 @@ import {
   onSnapshot,
   updateDoc,
   increment,
-  documentId,
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -37,56 +36,85 @@ export async function createChat(
   user2Name: string,
   user2Photo: string
 ): Promise<string> {
+  // Validate inputs
+  if (!listingId || !listingTitle || !user1Id || !user1Name || !user2Id || !user2Name) {
+    throw new Error('Missing required information for creating chat.');
+  }
+
   // Generate a deterministic chat ID to prevent duplicates and avoid complex queries
   // Format: listingId_participant1_participant2 (participants sorted alphabetically)
   const sortedParticipants = [user1Id, user2Id].sort();
   const chatId = `${listingId}_${sortedParticipants[0]}_${sortedParticipants[1]}`;
 
-  // Use query to check existence to avoid permission errors with getDoc on non-existent docs
-  // MUST include participant check to satisfy security rules ("rules are not filters")
-  const q = query(
-    collection(db, CHATS_COLLECTION),
-    where(documentId(), '==', chatId),
-    where('participants', 'array-contains', user1Id)
-  );
-
-  const snapshot = await getDocs(q);
-
-  if (!snapshot.empty) {
-    return chatId;
-  }
+  console.log('Creating chat with ID:', chatId);
 
   const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
 
-  // Create new chat document
-  await setDoc(chatDocRef, {
-    participants: [user1Id, user2Id],
-    participantDetails: {
-      [user1Id]: { name: user1Name, photoURL: user1Photo },
-      [user2Id]: { name: user2Name, photoURL: user2Photo },
-    },
-    listingId,
-    listingTitle,
-    lastMessage: '',
-    lastMessageAt: serverTimestamp(),
-    lastMessageSenderId: '',
-    unreadCount: {
-      [user1Id]: 0,
-      [user2Id]: 0,
-    },
-    createdAt: serverTimestamp(),
-  });
+  try {
+    // Try to get the document first
+    const chatSnap = await getDoc(chatDocRef);
+    
+    if (chatSnap.exists()) {
+      console.log('Chat already exists:', chatId);
+      return chatId;
+    }
 
-  // Notify the other user
-  await createNotification(
-    user2Id,
-    'new_match',
-    'New Match!',
-    `${user1Name} wants to connect regarding "${listingTitle}"`,
-    `/chats/${chatId}`
-  );
+    // Create new chat document
+    const chatData = {
+      participants: [user1Id, user2Id],
+      participantDetails: {
+        [user1Id]: { name: user1Name, photoURL: user1Photo || '' },
+        [user2Id]: { name: user2Name, photoURL: user2Photo || '' },
+      },
+      listingId,
+      listingTitle,
+      lastMessage: '',
+      lastMessageAt: serverTimestamp(),
+      lastMessageSenderId: '',
+      unreadCount: {
+        [user1Id]: 0,
+        [user2Id]: 0,
+      },
+      createdAt: serverTimestamp(),
+    };
 
-  return chatId;
+    console.log('Creating new chat with data:', chatData);
+
+    await setDoc(chatDocRef, chatData);
+
+    console.log('Chat created successfully:', chatId);
+
+    // Notify the other user (don't let notification failure break the flow)
+    try {
+      await createNotification(
+        user2Id,
+        'new_match',
+        'New Match!',
+        `${user1Name} wants to connect regarding "${listingTitle}"`,
+        `/chats/${chatId}`
+      );
+    } catch (notifError) {
+      console.warn('Failed to create notification:', notifError);
+      // Don't throw - chat creation was successful
+    }
+
+    return chatId;
+  } catch (error) {
+    console.error('Error creating chat:', error);
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('permission-denied')) {
+        throw new Error('Permission denied. You may not have access to create chats.');
+      }
+      if (error.message.includes('unavailable')) {
+        throw new Error('Service temporarily unavailable. Please try again.');
+      }
+      throw new Error(`Failed to create chat: ${error.message}`);
+    }
+    
+    throw new Error('Failed to create chat. Please try again.');
+  }
 }
 
 // ============================================

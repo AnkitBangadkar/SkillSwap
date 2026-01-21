@@ -98,18 +98,26 @@ export default function ChatRoom() {
   // Load conversation starters when chat is empty
   useEffect(() => {
     async function loadConversationStarters() {
-      if (!chat || messages.length > 0 || conversationStarters.length > 0) return;
+if (!chat || messages.length > 0 || conversationStarters.length > 0) return;
 
       setIsLoadingStarters(true);
       try {
-        // Fetch the listing to get full details
+        // Fetch listing to get full details
         const listing = await getListing(chat.listingId);
         if (listing) {
+          console.log('Generating conversation starters for listing:', listing);
           const starters = await generateConversationStarters(listing);
+          console.log('Generated starters:', starters);
           setConversationStarters(starters);
         }
       } catch (error) {
         console.error('Failed to generate conversation starters:', error);
+        // Set fallback conversation starters if AI fails
+        setConversationStarters([
+          "What specific topics would you like to cover?",
+          "How much experience do you have with this skill?",
+          "Would you prefer online or in-person sessions?",
+        ]);
       } finally {
         setIsLoadingStarters(false);
       }

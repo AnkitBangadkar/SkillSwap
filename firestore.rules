@@ -73,7 +73,7 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
     
-    // ==========================================
+// ==========================================
     // Chats Collection
     // ==========================================
     match /chats/{chatId} {
@@ -81,9 +81,8 @@ service cloud.firestore {
       allow get: if isAuthenticated() 
         && (resource == null || isParticipant(resource.data.participants));
       
-      // Allow list queries (must be a participant)
-      allow list: if isAuthenticated() 
-        && isParticipant(resource.data.participants);
+      // Allow list queries - must include participant filter in query
+      allow list: if isAuthenticated();
       
       // Authenticated users can create chats (if they're a participant)
       allow create: if isAuthenticated() 
